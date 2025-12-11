@@ -2,7 +2,7 @@ export const SONGS = [
   {
     id: 101,
     title: 'Midnight Echoes',
-    artistId: 1,
+    artistIds: [1],
     artist: 'The Lunar Collective',
     price: 29.99,
     cover: 'blue',
@@ -19,7 +19,7 @@ export const SONGS = [
   {
     id: 102,
     title: 'Heart of Glass',
-    artistId: 2,
+    artistIds: [2],
     artist: 'Sarah Jenkins',
     price: 149.99,
     cover: 'rose',
@@ -36,7 +36,7 @@ export const SONGS = [
   {
     id: 103,
     title: 'Cyber City',
-    artistId: 3,
+    artistIds: [3],
     artist: 'Neon Pulse',
     price: 49.99,
     cover: 'purple',
@@ -53,7 +53,7 @@ export const SONGS = [
   {
     id: 104,
     title: 'Velvet Soul',
-    artistId: 4,
+    artistIds: [4],
     artist: 'Marcus V',
     price: 99.99,
     cover: 'amber',
@@ -70,7 +70,7 @@ export const SONGS = [
   {
     id: 105,
     title: 'Gravity',
-    artistId: 5,
+    artistIds: [5, 2],
     artist: 'Jerry Martin x Nova',
     price: 29.99,
     cover: 'emerald',
@@ -87,7 +87,7 @@ export const SONGS = [
   {
     id: 106,
     title: 'Silence Speaks',
-    artistId: 6,
+    artistIds: [6],
     artist: 'The Quiet Ones',
     price: 39.99,
     cover: 'slate',

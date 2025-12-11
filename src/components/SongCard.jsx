@@ -1,5 +1,5 @@
 import React from 'react';
-import { Disc, Pause, Play, ShoppingBag } from 'lucide-react';
+import { Disc, Info, Pause, Play, ShoppingBag } from 'lucide-react';
 import clsx from 'clsx';
 import { AppButton } from './ui/primitives.jsx';
 
@@ -32,14 +32,63 @@ const SongCard = ({ song, onPlay, onAdd, isActive = false, isPlaying = false, on
         </div>
       </button>
       {onOpenStreams && (
+        <>
         <button
           type="button"
           onClick={() => onOpenStreams(song)}
-          className="absolute top-4 right-4 px-3 py-1 text-xs font-semibold tracking-wide rounded-full border border-white/20 bg-black/40 backdrop-blur-sm text-white hover:bg-white/10"
+          className="absolute top-4 right-4 px-3 py-1 text-xs font-semibold tracking-wide rounded-full border border-white/20 bg-black/40 backdrop-blur-sm text-white  transition-colors hover:text-lime-200 hover:border-lime-300/70"
         >
-          Listen full track
+          Listen Full Track
         </button>
-      )}
+      <div className="absolute top-4 left-4">
+        <div className="group/credits relative">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/50 backdrop-blur-sm text-white transition-colors group-hover/credits:border-lime-300/70 group-hover/credits:text-lime-200">
+            <Info size={14} />
+          </div>
+          <div className="pointer-events-none absolute left-0 top-10 w-56 rounded-2xl border border-white/15 bg-black/80 p-4 opacity-0 shadow-xl transition-opacity duration-200 group-hover/credits:opacity-100">
+            <p className="text-xs uppercase tracking-[0.3em] text-lime-300/80">Credits</p>
+            <p className="mt-2 text-sm font-semibold text-white">{song.artist}</p>
+            {song.artistIds?.length > 1 && (
+              <p className="text-xs text-zinc-400">Collaborators: {song.artistIds.length}</p>
+            )}
+            {song.genres?.length > 0 && (
+              <p className="mt-2 text-xs text-zinc-400">Genres: {song.genres.join(' • ')}</p>
+            )}
+            {song.streaming && Object.keys(song.streaming).length > 0 && (
+              <p className="mt-2 text-[11px] text-zinc-500">
+                Streaming: {Object.keys(song.streaming).join(' / ')}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+        </>
+        
+      )
+      // ||
+      // <div className="absolute top-4 left-4">
+      //   <div className="group/credits relative">
+      //     <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/50 backdrop-blur-sm text-white transition-colors group-hover/credits:border-lime-300/70 group-hover/credits:text-lime-200">
+      //       <Info size={14} />
+      //     </div>
+      //     <div className="pointer-events-none absolute left-0 top-10 w-56 rounded-2xl border border-white/15 bg-black/80 p-4 opacity-0 shadow-xl transition-opacity duration-200 group-hover/credits:opacity-100">
+      //       <p className="text-xs uppercase tracking-[0.3em] text-lime-300/80">Credits</p>
+      //       <p className="mt-2 text-sm font-semibold text-white">{song.artist}</p>
+      //       {song.artistIds?.length > 1 && (
+      //         <p className="text-xs text-zinc-400">Collaborators: {song.artistIds.length}</p>
+      //       )}
+      //       {song.genres?.length > 0 && (
+      //         <p className="mt-2 text-xs text-zinc-400">Genres: {song.genres.join(' • ')}</p>
+      //       )}
+      //       {song.streaming && Object.keys(song.streaming).length > 0 && (
+      //         <p className="mt-2 text-[11px] text-zinc-500">
+      //           Streaming: {Object.keys(song.streaming).join(' / ')}
+      //         </p>
+      //       )}
+      //     </div>
+      //   </div>
+      // </div>
+      }
     </div>
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-start gap-4">

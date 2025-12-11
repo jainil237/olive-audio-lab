@@ -143,7 +143,7 @@ const OliveAudioLab = () => {
       <header className="relative pt-40 pb-20 md:pt-60 md:pb-40 px-6 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none">
            {/* Background Image - contained to sides */}
-           <div className="absolute inset-x-0 top-0 bottom-0 bg-cover bg-center bg-no-repeat opacity-80" style={{backgroundImage: 'url("/src/assets/OliveAudioLabBrick.jpg")'}} />
+           <div className="absolute inset-x-0 top-0 bottom-0 bg-cover bg-center bg-no-repeat opacity-80" style={{    backgroundImage: 'url("/src/assets/OliveAudioLabBrick.jpg")',  marginTop: '-18.75rem'}} />
            
            {/* Dark gradient overlay for text area */}
            <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/60" />
@@ -153,7 +153,7 @@ const OliveAudioLab = () => {
            <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-lime-900/10 rounded-full blur-[100px]" />
         </div>
 
-        <div className="container mx-auto relative z-10 text-center">
+        <div className="container mx-auto relative z-10 text-center md:text-center md:max-w-4xl" style={{marginTop: '25.5rem'}}>
           <span className="inline-block py-1 px-3 rounded-full border border-lime-500/30 text-lime-400 text-xs font-bold tracking-widest uppercase mb-6 animate-pulse">
             Sonic Perfection
           </span>
@@ -164,7 +164,10 @@ const OliveAudioLab = () => {
             Founder of <span className="text-white font-medium">Olive Audio Lab</span>. 
             Sculpting sound for the next generation of artists.
           </p>
-          <div className="flex flex-col md:flex-row justify-center gap-4">
+          <div className="flex flex-col md:flex-row justify-start gap-4">
+            <Button variant="ghost" className="order-3 md:order-none" onClick={() => window.location.assign('/login')}>
+              Sign in to dashboard
+            </Button>
             <Button onClick={() => scrollTo('work')}>
               Listen to Works <ChevronRight size={16} />
             </Button>
@@ -345,9 +348,9 @@ const OliveAudioLab = () => {
           <div className="mt-20 flex flex-col md:flex-row justify-between items-center text-zinc-500 text-sm">
              <p>© 2024 Olive Audio Lab. All rights reserved.</p>
              <div className="flex gap-6 mt-4 md:mt-0">
-               <a href="#" className="hover:text-white">Instagram</a>
-               <a href="#" className="hover:text-white">Twitter</a>
-               <a href="#" className="hover:text-white">SoundCloud</a>
+               <a href="https://www.instagram.com/jerrymartin050?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" className="hover:text-white">Instagram</a>
+               <a href="https://open.spotify.com/artist/7HLVwydcZhCpj92ZDUCxlw?si=APfyqvR2SZeX0nJCpyre0A" className="hover:text-white">Spotify</a>
+               <a href="https://music.apple.com/us/artist/jerry-martin/1542172902" className="hover:text-white">Apple Music</a>
              </div>
           </div>
         </div>

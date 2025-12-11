@@ -59,7 +59,11 @@ const QueriesPage = () => {
           Share project details so we can prepare timelines, budget and deliverables. Our team responds within 24 hours.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="relative space-y-4 overflow-hidden rounded-[2.5rem] border border-white/5 bg-black/60 p-6 md:p-8">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-emerald-500/10 opacity-70" />
+          <div className="pointer-events-none absolute -top-20 -right-16 h-48 w-48 rounded-full bg-lime-400/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-28 -left-12 h-44 w-44 rounded-full bg-emerald-400/20 blur-3xl" />
+          <div className="relative space-y-4">
           {[
             { label: 'Name', name: 'name', type: 'text', placeholder: 'Your full name', required: true },
             { label: 'Email', name: 'email', type: 'email', placeholder: 'you@example.com', required: true },
@@ -99,6 +103,7 @@ const QueriesPage = () => {
               Thanks! We will respond within 24 hours.
             </div>
           )}
+          </div>
         </form>
       </div>
 

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PaymentDialog from '../components/PaymentDialog.jsx';
 import SongCard from '../components/SongCard.jsx';
 import SongStreamingDialog from '../components/SongStreamingDialog.jsx';
@@ -7,11 +8,21 @@ import { useCart } from '../context/CartContext.jsx';
 import { useCatalog } from '../context/CatalogContext.jsx';
 
 const CartPage = () => {
-  const { items, removeItem, total, recordInvoice, billingHistory, removeInvoice } = useCart();
+  const {
+    items,
+    addItem,
+    removeItem,
+    total,
+    recordInvoice,
+    billingHistory,
+    removeInvoice,
+    lastInvoice,
+    clearLastInvoice,
+  } = useCart();
   const { songs } = useCatalog();
   const [paymentOpen, setPaymentOpen] = useState(false);
-  const [lastInvoice, setLastInvoice] = useState(null);
   const [streamSong, setStreamSong] = useState(null);
+  const navigate = useNavigate();
 
   const recommendations = useMemo(
     () => songs.filter((song) => !items.find((item) => item.id === song.id)).slice(0, 3),
@@ -29,7 +40,6 @@ const CartPage = () => {
     };
 
     recordInvoice(invoice);
-    setLastInvoice(invoice);
   };
 
   return (
@@ -42,6 +52,33 @@ const CartPage = () => {
           Secure your project slot with Stripe or Razorpay. After payment we’ll send contracts and project logistics to your inbox.
         </p>
       </section>
+
+      {lastInvoice && (
+        <GlassCard className="bg-lime-500/10 border-lime-400/40 text-lime-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-sm uppercase tracking-[0.3em] text-lime-200/80">Last payment attempt</p>
+            <p className="text-lg font-semibold text-white">
+              {lastInvoice.gateway} • ${lastInvoice.amount.toFixed(2)} — {lastInvoice.status}
+            </p>
+            {lastInvoice.reference && (
+              <p className="text-xs text-lime-200/70">Reference: {lastInvoice.reference}</p>
+            )}
+            {lastInvoice.customer && (
+              <p className="text-xs text-lime-200/70">
+                Billed to {lastInvoice.customer.name} · {lastInvoice.customer.email}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <AppButton variant="secondary" onClick={() => navigate('/overview')}>
+              View overview
+            </AppButton>
+            <AppButton variant="ghost" className="text-lime-200" onClick={clearLastInvoice}>
+              Dismiss
+            </AppButton>
+          </div>
+        </GlassCard>
+      )}
 
       <div className="grid gap-8 xl:grid-cols-[2fr_1fr]">
         <GlassCard className="bg-black/50 space-y-6">
@@ -86,7 +123,11 @@ const CartPage = () => {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-2xl font-semibold">${total.toFixed(2)}</span>
-              <AppButton variant="primary" onClick={() => setPaymentOpen(true)} disabled={items.length === 0}>
+              <AppButton
+                variant="primary"
+                onClick={() => setPaymentOpen(true)}
+                disabled={items.length === 0}
+              >
                 Proceed to payment
               </AppButton>
             </div>
@@ -128,18 +169,12 @@ const CartPage = () => {
             </div>
           </GlassCard>
 
-          {lastInvoice && (
-            <GlassCard className="bg-lime-500/10 border-lime-400/40 text-lime-100">
-              Payment recorded with {lastInvoice.gateway}. Invoice reference {lastInvoice.reference}.
-            </GlassCard>
-          )}
-
           {recommendations.length > 0 && (
             <GlassCard className="bg-black/50 space-y-4">
               <h3 className="text-xl font-semibold">You may also like</h3>
               <div className="grid gap-4">
                 {recommendations.map((song) => (
-                  <SongCard key={song.id} song={song} onAdd={() => {}} onOpenStreams={setStreamSong} />
+                  <SongCard key={song.id} song={song} onAdd={() => addItem(song)} onOpenStreams={setStreamSong} />
                 ))}
               </div>
             </GlassCard>
@@ -147,12 +182,7 @@ const CartPage = () => {
         </div>
       </div>
 
-      <PaymentDialog
-        open={paymentOpen}
-        onClose={() => setPaymentOpen(false)}
-        amount={total}
-        onSuccess={handlePaymentSuccess}
-      />
+      <PaymentDialog open={paymentOpen} onClose={() => setPaymentOpen(false)} amount={total} onSuccess={handlePaymentSuccess} />
 
       <SongStreamingDialog open={!!streamSong} onClose={() => setStreamSong(null)} song={streamSong} />
     </div>

@@ -34,7 +34,7 @@ const ArtistsPage = () => {
   };
 
   const handleViewSongs = (artist) => {
-    applySongFilter({ artistId: artist.id });
+    applySongFilter({ artistIds: [artist.id] });
     navigate('/songs', { state: { fromArtist: true } });
   };
 
