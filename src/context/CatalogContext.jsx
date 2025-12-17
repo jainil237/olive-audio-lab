@@ -1,202 +1,89 @@
-import React, { createContext, useContext, useMemo, useState, useCallback } from 'react';
-import { ACHIEVEMENTS as initialAchievements, ARTISTS as initialArtists, SONGS as initialSongs } from '../data/catalog.js';
+import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from 'react';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import { useAuth } from './AuthContext.jsx';
 
 const CatalogContext = createContext(null);
 
-const SONG_FILTER_STORAGE_KEY = 'olive:song-filter';
-
+// Reuse your existing helper for song artists
 const normalizeArtistIds = (input) => {
-  if (Array.isArray(input)) {
-    return input
-      .map((value) => Number(value))
-      .filter((value) => Number.isInteger(value))
-      .filter((value, index, self) => self.indexOf(value) === index);
-  }
+  if (Array.isArray(input)) return input.map(String); // Ensure IDs are strings for Firestore
   if (input == null) return [];
-  const single = Number(input);
-  return Number.isInteger(single) ? [single] : [];
+  return [String(input)];
 };
-
-const readStoredSongFilter = () => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = sessionStorage.getItem(SONG_FILTER_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed?.artistIds)) return null;
-    const artistIds = normalizeArtistIds(parsed.artistIds);
-    return artistIds.length ? { artistIds } : null;
-  } catch (error) {
-    console.warn('Failed to read stored song filter', error);
-    return null;
-  }
-};
-
-const persistSongFilter = (filter) => {
-  if (typeof window === 'undefined') return;
-  try {
-    if (filter?.artistIds?.length) {
-      sessionStorage.setItem(SONG_FILTER_STORAGE_KEY, JSON.stringify({ artistIds: filter.artistIds }));
-    } else {
-      sessionStorage.removeItem(SONG_FILTER_STORAGE_KEY);
-    }
-  } catch (error) {
-    console.warn('Failed to persist song filter', error);
-  }
-};
-
-const createId = (prefix) => `${prefix}_${Date.now()}`;
 
 export const CatalogProvider = ({ children }) => {
-  const [songs, setSongs] = useState(initialSongs.map((song) => ({ ...song, artistIds: normalizeArtistIds(song.artistIds ?? song.artistId) })));
-  const [artists, setArtists] = useState(initialArtists);
-  const [achievements, setAchievements] = useState(initialAchievements);
-  const [songFilter, setSongFilter] = useState(() => readStoredSongFilter());
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const [songs, setSongs] = useState([]);
+  const [artists, setArtists] = useState([]);
+  const [achievements, setAchievements] = useState([]);
+  const [songFilter, setSongFilter] = useState(null);
+  const { user, isAdmin } = useAuth();
 
-  const enrichSong = useCallback(
-    (input) => {
-      const { artistId, artistIds, genres, streaming, ...rest } = input;
-      const normalizedIds = normalizeArtistIds(artistIds ?? artistId);
-      const artistNames = normalizedIds
-        .map((id) => artists.find((artist) => artist.id === id)?.name)
-        .filter(Boolean);
-
-      return {
-        id: rest.id ?? createId('song'),
-        genres: Array.isArray(genres) ? genres : genres ? [genres].flat() : [],
-        streaming: streaming ? { ...streaming } : {},
-        artistIds: normalizedIds,
-        artist: artistNames.length ? artistNames.join(' x ') : rest.artist || 'Independent artist',
-        ...rest,
-      };
-    },
-    [artists],
-  );
-
-  // ---- SONG OPERATIONS ----
-  const addSong = useCallback(
-    (song) => {
-      setSongs((prev) => [enrichSong(song), ...prev]);
-    },
-    [enrichSong],
-  );
-
-  const updateSong = useCallback(
-    (id, updates) => {
-      setSongs((prev) => prev.map((song) => (song.id === id ? enrichSong({ ...song, ...updates }) : song)));
-    },
-    [enrichSong],
-  );
-
-  const deleteSong = useCallback((id) => {
-    setSongs((prev) => prev.filter((song) => song.id !== id));
-  }, []);
-
-  const applySongFilter = useCallback((filter) => {
-    if (filter?.artistIds) {
-      const artistIds = normalizeArtistIds(filter.artistIds);
-      if (artistIds.length === 0) {
-        setSongFilter(null);
-        persistSongFilter(null);
-        return;
-      }
-      const next = { artistIds };
-      setSongFilter(next);
-      persistSongFilter(next);
-      return;
-    }
-    setSongFilter(null);
-    persistSongFilter(null);
-  }, []);
-
-  const clearSongFilter = useCallback(() => {
-    setSongFilter(null);
-    persistSongFilter(null);
-  }, []);
-
-  // ---- ARTIST OPERATIONS ----
-  const addArtist = useCallback((artist) => {
-    setArtists((prev) => [
-      {
-        id: artist.id || createId('artist'),
-        genres: artist.genres || [],
-        honors: artist.honors || [],
-        notableWorks: artist.notableWorks || [],
-        ...artist,
-      },
-      ...prev,
-    ]);
-  }, []);
-
-  const updateArtist = useCallback((id, updates) => {
-    setArtists((prev) => prev.map((artist) => (artist.id === id ? { ...artist, ...updates } : artist)));
-  }, []);
-
-  const deleteArtist = useCallback((id) => {
-    setArtists((prev) => prev.filter((artist) => artist.id !== id));
-    setSongs((prev) =>
-      prev.map((song) => {
-        if (!song.artistIds?.includes(id)) {
-          return song;
-        }
-        const remainingIds = song.artistIds.filter((artistId) => artistId !== id);
-        return enrichSong({ ...song, artistIds: remainingIds });
-      }),
+  // 1. REAL-TIME DATA SYNC
+  useEffect(() => {
+    const unsubSongs = onSnapshot(collection(db, 'songs'), (snap) => 
+      setSongs(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     );
-  }, [enrichSong]);
+    const unsubArtists = onSnapshot(collection(db, 'artists'), (snap) => 
+      setArtists(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
+    const unsubAchievements = onSnapshot(collection(db, 'achievements'), (snap) => 
+      setAchievements(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
 
-  // ---- ACHIEVEMENT OPERATIONS ----
-  const addAchievement = useCallback((achievement) => {
-    setAchievements((prev) => [
-      {
-        id: achievement.id || createId('achievement'),
-        ...achievement,
-      },
-      ...prev,
-    ]);
+    return () => { unsubSongs(); unsubArtists(); unsubAchievements(); };
   }, []);
 
-  const updateAchievement = useCallback((id, updates) => {
-    setAchievements((prev) => prev.map((achievement) => (achievement.id === id ? { ...achievement, ...updates } : achievement)));
-  }, []);
+  // 2. HELPER TO ENRICH SONGS (Join with Artists)
+  const enrichSong = useCallback((songData) => {
+     // Your existing logic, adapted for real data
+     const normalizedIds = normalizeArtistIds(songData.artistIds);
+     const artistNames = normalizedIds
+        .map((id) => artists.find((a) => String(a.id) === id)?.name)
+        .filter(Boolean);
+      
+     return {
+       ...songData,
+       artistIds: normalizedIds,
+       artist: artistNames.length ? artistNames.join(' x ') : songData.artist || 'Independent',
+     };
+  }, [artists]);
 
-  const deleteAchievement = useCallback((id) => {
-    setAchievements((prev) => prev.filter((achievement) => achievement.id !== id));
-  }, []);
+  const enrichedSongs = useMemo(() => songs.map(enrichSong), [songs, enrichSong]);
 
-  const value = useMemo(
-    () => ({
-      songs,
-      artists,
-      achievements,
-      addSong,
-      updateSong,
-      deleteSong,
-      songFilter,
-      applySongFilter,
-      clearSongFilter,
-      addArtist,
-      updateArtist,
-      deleteArtist,
-      addAchievement,
-      updateAchievement,
-      deleteAchievement,
-      isAdmin,
-      currentUser: user,
-    }),
-    [songs, artists, achievements, songFilter, isAdmin, user, addSong, updateSong, deleteSong, applySongFilter, clearSongFilter, addArtist, updateArtist, deleteArtist, addAchievement, updateAchievement, deleteAchievement]
-  );
+  // 3. DATABASE ACTIONS
+  // We check isAdmin here, but Firestore Rules provide the real security.
+  const addSong = async (data) => isAdmin && addDoc(collection(db, 'songs'), data);
+  const updateSong = async (id, data) => isAdmin && updateDoc(doc(db, 'songs', id), data);
+  const deleteSong = async (id) => isAdmin && deleteDoc(doc(db, 'songs', id));
+
+  const addArtist = async (data) => isAdmin && addDoc(collection(db, 'artists'), data);
+  const updateArtist = async (id, data) => isAdmin && updateDoc(doc(db, 'artists', id), data);
+  const deleteArtist = async (id) => isAdmin && deleteDoc(doc(db, 'artists', id));
+
+  const addAchievement = async (data) => isAdmin && addDoc(collection(db, 'achievements'), data);
+  const updateAchievement = async (id, data) => isAdmin && updateDoc(doc(db, 'achievements', id), data);
+  const deleteAchievement = async (id) => isAdmin && deleteDoc(doc(db, 'achievements', id));
+
+  const applySongFilter = (filter) => setSongFilter(filter);
+  const clearSongFilter = () => setSongFilter(null);
+
+  const value = useMemo(() => ({
+    songs: enrichedSongs,
+    artists,
+    achievements,
+    addSong, updateSong, deleteSong,
+    addArtist, updateArtist, deleteArtist,
+    addAchievement, updateAchievement, deleteAchievement,
+    songFilter, applySongFilter, clearSongFilter,
+    isAdmin, currentUser: user,
+  }), [enrichedSongs, artists, achievements, songFilter, isAdmin, user]);
 
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;
 };
 
 export const useCatalog = () => {
   const context = useContext(CatalogContext);
-  if (!context) {
-    throw new Error('useCatalog must be used within a CatalogProvider');
-  }
+  if (!context) throw new Error('useCatalog must be used within a CatalogProvider');
   return context;
 };

@@ -12,6 +12,7 @@ import { CartProvider } from './context/CartContext.jsx';
 import { CatalogProvider } from './context/CatalogContext.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import LoginPage from './pages/Login.jsx';
+import SignupPage from './pages/Signup.jsx';
 import ProtectedRoute from './components/routing/ProtectedRoute.jsx';
 
 const App = () => (
@@ -22,6 +23,7 @@ const App = () => (
           <Routes>
             <Route index element={<OliveAudioLab />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
             <Route
               element={
                 <ProtectedRoute>
