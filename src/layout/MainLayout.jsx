@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Menu, ShoppingBag, X } from 'lucide-react';
-import { useCart } from '../context/CartContext.jsx';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Menu, X } from 'lucide-react';
+// import { ShoppingBag } from 'lucide-react';
+// import { useCart } from '../context/CartContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import BackToTopButton from '../components/BackToTopButton.jsx';
 import { AppButton } from '../components/ui/primitives.jsx';
@@ -13,14 +14,14 @@ const navItems = [
   { label: 'Artists', to: '/artists' },
   { label: 'Achievements', to: '/achievements' },
   { label: 'Queries', to: '/queries' },
-  { label: 'Cart & Billing', to: '/cart' },
+  // { label: 'Cart & Billing', to: '/cart' },
 ];
 
 const MainLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
-  const { items } = useCart();
+  // const { items } = useCart();
   const { user, logout } = useAuth();
 
   useEffect(() => {
@@ -58,14 +59,14 @@ const MainLayout = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link className="relative p-2 hover:bg-white/10 rounded-full transition-colors" to="/cart">
+            {/* <Link className="relative p-2 hover:bg-white/10 rounded-full transition-colors" to="/cart">
               <ShoppingBag size={20} />
               {items.length > 0 && (
                 <span className="absolute top-0 right-0 w-4 h-4 bg-lime-500 text-black text-[10px] font-bold flex items-center justify-center rounded-full">
                   {items.length}
                 </span>
               )}
-            </Link>
+            </Link> */}
             {user ? (
               <AppButton
                 variant="secondary"

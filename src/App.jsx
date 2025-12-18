@@ -6,7 +6,7 @@ import SongsPage from './pages/Songs.jsx';
 import ArtistsPage from './pages/Artists.jsx';
 import AchievementsPage from './pages/Achievements.jsx';
 import QueriesPage from './pages/Queries.jsx';
-import CartPage from './pages/Cart.jsx';
+// import CartPage from './pages/Cart.jsx';
 import OliveAudioLab from './OliveAudioLab.jsx';
 import { CartProvider } from './context/CartContext.jsx';
 import { CatalogProvider } from './context/CatalogContext.jsx';
@@ -14,6 +14,7 @@ import { AuthProvider } from './context/AuthContext.jsx';
 import LoginPage from './pages/Login.jsx';
 import SignupPage from './pages/Signup.jsx';
 import ProtectedRoute from './components/routing/ProtectedRoute.jsx';
+import QueriesListingPage from './pages/QueriesListing.jsx';
 
 const App = () => (
   <BrowserRouter>
@@ -36,7 +37,8 @@ const App = () => (
               <Route path="/artists" element={<ArtistsPage />} />
               <Route path="/achievements" element={<AchievementsPage />} />
               <Route path="/queries" element={<QueriesPage />} />
-              <Route path="/cart" element={<CartPage />} />
+              {/* <Route path="/cart" element={<CartPage />} /> */}
+              <Route path="/queries-listing" element={<QueriesListingPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/overview" replace />} />
           </Routes>

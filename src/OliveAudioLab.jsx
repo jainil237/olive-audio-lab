@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Play, Pause, ShoppingBag, X, Menu, ChevronRight, 
+  Play, Pause, /* ShoppingBag, */ X, Menu, ChevronRight, 
   Award, Mic2, Star, Quote, Headphones, Disc, Volume2 
 } from 'lucide-react';
-import { useCart } from './context/CartContext.jsx';
+// import { useCart } from './context/CartContext.jsx';
 import { useCatalog } from './context/CatalogContext.jsx';
 import { TESTIMONIALS_CLIENTS, EXPERT_REVIEWS } from './data/catalog.js';
 
@@ -39,10 +39,10 @@ const Card = ({ children, className = '' }) => (
 
 const OliveAudioLab = () => {
   const { songs, artists, achievements } = useCatalog();
-  const { items: cartItems, addItem, removeItem, total } = useCart();
+  // const { items: cartItems, addItem, removeItem, total } = useCart();
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  // const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -63,14 +63,14 @@ const OliveAudioLab = () => {
     }
   };
 
-  const addToCart = (song) => {
-    addItem(song);
-    setIsCartOpen(true);
-  };
+  // const addToCart = (song) => {
+  //   addItem(song);
+  //   setIsCartOpen(true);
+  // };
 
-  const removeFromCart = (id) => {
-    removeItem(id);
-  };
+  // const removeFromCart = (id) => {
+  //   removeItem(id);
+  // };
 
   // Scroll to section helper
   const scrollTo = (id) => {
@@ -108,7 +108,7 @@ const OliveAudioLab = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            <button 
+            {/* <button 
               className="relative p-2 hover:bg-white/10 rounded-full transition-colors"
               onClick={() => setIsCartOpen(true)}
             >
@@ -118,7 +118,7 @@ const OliveAudioLab = () => {
                   {cartItems.length}
                 </span>
               )}
-            </button>
+            </button> */}
             <button className="md:hidden" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
               <Menu size={24} />
             </button>
@@ -211,10 +211,10 @@ const OliveAudioLab = () => {
                   </div>
                   
                   <div className="mt-6 flex items-center justify-between">
-                    <span className="text-lg font-medium">${song.price}</span>
+                    {/* <span className="text-lg font-medium">${song.price}</span>
                     <Button variant="outline" className="text-xs py-2 px-4 h-auto" onClick={() => addToCart(song)}>
                       Purchase License
-                    </Button>
+                    </Button> */}
                   </div>
                 </div>
               </div>
@@ -386,7 +386,7 @@ const OliveAudioLab = () => {
       </div>
 
       {/* --- SHOPPING CART DRAWER --- */}
-      {isCartOpen && (
+      {/* {isCartOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsCartOpen(false)} />
           <div className="relative w-full max-w-md bg-zinc-900 h-full border-l border-zinc-800 p-8 flex flex-col animate-slide-in-right">
@@ -432,7 +432,7 @@ const OliveAudioLab = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Styles for animations */}
       <style>{`

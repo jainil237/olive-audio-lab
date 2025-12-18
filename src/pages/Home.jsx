@@ -5,12 +5,12 @@ import ArtistCard from '../components/ArtistCard.jsx';
 import AchievementTimeline from '../components/AchievementTimeline.jsx';
 import { AppButton, SectionHeading, GlassCard } from '../components/ui/primitives.jsx';
 import { useCatalog } from '../context/CatalogContext.jsx';
-import { useCart } from '../context/CartContext.jsx';
+// import { useCart } from '../context/CartContext.jsx';
 import SongStreamingDialog from '../components/SongStreamingDialog.jsx';
 
 const Home = () => {
   const { songs, artists, achievements } = useCatalog();
-  const { addItem } = useCart();
+  // const { addItem } = useCart();
   const navigate = useNavigate();
   const [streamSong, setStreamSong] = useState(null);
 
@@ -54,7 +54,7 @@ const Home = () => {
         </div>
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {spotlightSongs.map((song) => (
-            <SongCard key={song.id} song={song} onAdd={addItem} onOpenStreams={setStreamSong} />
+            <SongCard key={song.id} song={song} onOpenStreams={setStreamSong} />
           ))}
         </div>
       </section>
