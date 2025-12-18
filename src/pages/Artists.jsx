@@ -26,9 +26,18 @@ const ArtistsPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // const handleViewSongs = (artist) => {
+  //   applySongFilter({ artistIds: [artist.id] });
+  //   navigate('/songs', { state: { fromArtist: true } });
+  // };
+
   const handleViewSongs = (artist) => {
-    applySongFilter({ artistIds: [artist.id] });
-    navigate('/songs', { state: { fromArtist: true } });
+    // UPDATED: Navigate with query param so Songs page filters automatically
+    if (!artist || !artist.id) {
+        console.error("Missing artist ID!");
+        return;
+    }
+    navigate(`/songs?artists=${artist.id}`);
   };
 
   const handleChange = (event) => {

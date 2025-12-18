@@ -1,12 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Plus, Loader2, X, Filter } from 'lucide-react'; 
 import SongCard from '../components/SongCard.jsx';
 import SongStreamingDialog from '../components/SongStreamingDialog.jsx';
 import { AppButton, SectionHeading } from '../components/ui/primitives.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import { useCatalog } from '../context/CatalogContext.jsx';
-// import { useCart } from '../context/CartContext.jsx';
 
 const INITIAL_FORM = {
   title: '',
@@ -31,56 +30,77 @@ const SongsPage = () => {
     songFilter,
     applySongFilter,
     clearSongFilter,
-    isAdmin 
+    isAdmin,
+    loading: contextLoading 
   } = useCatalog();
-  // const { addItem } = useCart();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
 
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Local state for the modal/form
   const [streamSong, setStreamSong] = useState(null);
   const [formData, setFormData] = useState(INITIAL_FORM);
   const [editingId, setEditingId] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Initialize form with first artist if empty
-  useEffect(() => {
-    if (!formData.artistIds?.length && artists.length > 0 && isFormOpen && !editingId) {
-      setFormData((prev) => ({ ...prev, artistIds: [String(artists[0].id)] }));
-    }
-  }, [artists, isFormOpen, editingId]);
-
-  // Handle Filter Logic from URL
+  // --- CRITICAL FIX: ONE-WAY SYNC (URL -> CONTEXT) ---
+  // We strictly listen to URL changes and update the Context.
+  // We DO NOT listen to Context to update URL (that caused the loop).
   useEffect(() => {
       const param = searchParams.get('artists');
-      // Fix: Don't force Numbers here either, keep strings for Firestore IDs
-      const fromParams = param ? param.split(',').map(s => s.trim()).filter(Boolean) : [];
       
-      const current = songFilter?.artistIds ?? [];
-      const paramKey = fromParams.join(',');
-      const currentKey = current.join(',');
+      // Convert URL string "1,2,3" into Array ["1","2","3"]
+      const urlArtistIds = param ? param.split(',').map(s => s.trim()).filter(Boolean) : [];
+      
+      const currentContextIds = songFilter?.artistIds ?? [];
+      
+      // Compare arrays to avoid infinite re-renders
+      const urlKey = urlArtistIds.sort().join(',');
+      const contextKey = currentContextIds.sort().join(',');
   
-      if (paramKey !== currentKey) {
-        applySongFilter(fromParams.length ? { artistIds: fromParams } : null);
+      if (urlKey !== contextKey) {
+        // If URL is empty, clear context. If URL has data, update context.
+        if (urlArtistIds.length === 0) {
+            clearSongFilter();
+        } else {
+            applySongFilter({ artistIds: urlArtistIds });
+        }
       }
-  }, [searchParams, applySongFilter, songFilter]);
+  }, [searchParams, songFilter, applySongFilter, clearSongFilter]);
 
-  // Sync Filter to URL
-  useEffect(() => {
-    const ids = songFilter?.artistIds ?? [];
-    const param = searchParams.get('artists');
-    const paramIds = param ? param.split(',').map(s => s.trim()).filter(Boolean) : [];
+  // --- HANDLERS (Update URL Directly) ---
+  
+  const handleClearFilters = () => {
+    // Just clear URL. The useEffect above will catch this and clear the Context automatically.
+    setSearchParams({}, { replace: true });
+  };
+
+  const toggleFilterArtist = useCallback((artistId) => {
+    const sid = String(artistId);
     
-    if (ids.join(',') === paramIds.join(',')) return;
-
-    if (ids.length) {
-      setSearchParams({ artists: ids.join(',') }, { replace: true });
-    } else if (param) {
-      setSearchParams({}, { replace: true });
+    // 1. Get current IDs from URL (Source of Truth)
+    const currentParam = searchParams.get('artists');
+    const currentIds = currentParam ? currentParam.split(',').filter(Boolean) : [];
+    const idSet = new Set(currentIds);
+    
+    // 2. Toggle logic
+    if (idSet.has(sid)) {
+        idSet.delete(sid);
+    } else {
+        idSet.add(sid);
     }
-  }, [songFilter, searchParams, setSearchParams]);
+    
+    // 3. Update URL
+    const nextIds = Array.from(idSet);
+    if (nextIds.length === 0) {
+        setSearchParams({}, { replace: true });
+    } else {
+        setSearchParams({ artists: nextIds.join(',') }, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
+  // --- FILTER LOGIC (Derived from Context) ---
   const filteredSongs = useMemo(() => {
     const activeIds = songFilter?.artistIds;
     if (activeIds?.length) {
@@ -92,6 +112,7 @@ const SongsPage = () => {
     return songs;
   }, [songs, songFilter]);
 
+  // ... Form Handlers ...
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -106,15 +127,6 @@ const SongsPage = () => {
       return { ...prev, artistIds: Array.from(current) };
     });
   };
-
-  const toggleFilterArtist = useCallback((artistId) => {
-    const sid = String(artistId);
-    const current = new Set(songFilter?.artistIds ?? []);
-    if (current.has(sid)) current.delete(sid);
-    else current.add(sid);
-    const next = Array.from(current);
-    applySongFilter(next.length ? { artistIds: next } : null);
-  }, [songFilter, applySongFilter]);
 
   const openAddModal = () => {
     setFormData({ ...INITIAL_FORM, artistIds: artists[0] ? [String(artists[0].id)] : [] });
@@ -163,7 +175,7 @@ const SongsPage = () => {
 
       const payload = {
         title: formData.title,
-        artistIds: formData.artistIds, // Sending Strings, NOT Numbers
+        artistIds: formData.artistIds,
         price: Number(formData.price) || 0,
         duration: formData.duration,
         type: formData.type,
@@ -176,7 +188,7 @@ const SongsPage = () => {
       } else {
         await addSong(payload);
       }
-      setIsFormOpen(false); // Close only on success
+      setIsFormOpen(false);
     } catch (error) {
       console.error("Failed to save song", error);
     } finally {
@@ -185,7 +197,7 @@ const SongsPage = () => {
   };
 
   return (
-    <div className="space-y-16 text-white">
+    <div className="space-y-16 text-white min-h-screen">
       <section className="space-y-6">
         <div className="flex items-center justify-between gap-6">
           <SectionHeading align="left" eyebrow="Catalogue">Songs & Albums</SectionHeading>
@@ -194,7 +206,7 @@ const SongsPage = () => {
         
         <div className="flex items-start justify-between gap-4">
           <p className="text-zinc-400 max-w-2xl">
-            Licenses for production, mixing and mastering projects. Add tracks to your cart to secure your spot in the studio calendar.
+            Licenses for production, mixing and mastering projects.
           </p>
           {isAdmin && (
             <button 
@@ -206,48 +218,82 @@ const SongsPage = () => {
           )}
         </div>
 
+        {/* --- FILTER BAR --- */}
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-zinc-500 text-sm mr-2">
+                <Filter size={14} />
+                <span>Filter by Artist:</span>
+            </div>
+            
+            {/* Clear Filter Button */}
+            {songFilter?.artistIds?.length > 0 && (
+                 <button
+                 onClick={handleClearFilters}
+                 className="flex items-center gap-1 px-3 py-2 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 text-sm hover:bg-red-500/20 transition-colors"
+               >
+                 <X size={14} /> Clear
+               </button>
+            )}
+
             {artists.map((artist) => {
+              // Check active state against URL params OR Context (Context is safer here as it lags slightly less visually)
               const active = songFilter?.artistIds?.includes(String(artist.id));
               return (
                 <button
                   key={artist.id}
                   type="button"
                   onClick={() => toggleFilterArtist(artist.id)}
-                  className={`px-4 py-2 rounded-full border transition-colors text-sm ${active ? 'border-lime-400 bg-lime-500/20 text-white' : 'border-white/10 bg-black/40 text-zinc-300 hover:border-lime-300/60 hover:text-white'}`}
+                  className={`px-4 py-2 rounded-full border transition-colors text-sm ${
+                    active 
+                    ? 'border-lime-400 bg-lime-500/20 text-white' 
+                    : 'border-white/10 bg-black/40 text-zinc-300 hover:border-lime-300/60 hover:text-white'
+                  }`}
                 >
                   {artist.name}
                 </button>
               );
             })}
-            {songFilter?.artistIds?.length ? (
-              <AppButton variant="ghost" onClick={clearSongFilter}>Clear filters</AppButton>
-            ) : null}
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {filteredSongs.map((song) => (
-            <SongCard
-              key={song.id}
-              song={song}
-              onOpenStreams={setStreamSong}
-              isAdmin={isAdmin}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
+        {/* --- MAIN CONTENT (With Context Loader) --- */}
+        {contextLoading ? (
+           <div className="flex flex-col items-center justify-center py-32 text-zinc-500">
+             <Loader2 className="w-10 h-10 animate-spin mb-4 text-lime-400" />
+             <p className="animate-pulse">Loading library...</p>
+           </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {filteredSongs.length > 0 ? (
+                filteredSongs.map((song) => (
+                    <SongCard
+                        key={song.id}
+                        song={song}
+                        onOpenStreams={setStreamSong}
+                        isAdmin={isAdmin}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                    />
+                ))
+            ) : (
+                <div className="col-span-full py-20 text-center text-zinc-500 border border-dashed border-zinc-800 rounded-2xl">
+                    <p>No songs found for this artist.</p>
+                    <button onClick={handleClearFilters} className="mt-4 text-lime-400 hover:underline">Clear filters to see all songs</button>
+                </div>
+            )}
+          </div>
+        )}
       </section>
 
+      {/* Modal and Streaming Dialog */}
       <Modal 
         open={isFormOpen} 
         onClose={() => setIsFormOpen(false)} 
         title={editingId ? 'Edit Song' : 'Add New Song'}
       >
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid gap-4 md:grid-cols-2">
+           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <label className="text-sm text-zinc-400">Title</label>
               <input type="text" name="title" value={formData.title} onChange={handleInputChange} className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-lime-400 focus:outline-none" required />

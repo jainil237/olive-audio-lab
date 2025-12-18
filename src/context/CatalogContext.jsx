@@ -18,6 +18,12 @@ export const CatalogProvider = ({ children }) => {
   const [songs, setSongs] = useState([]);
   const [artists, setArtists] = useState([]);
   const [achievements, setAchievements] = useState([]);
+  
+  // --- ROBUST LOADING STATE ---
+  const [songsLoaded, setSongsLoaded] = useState(false);
+  const [artistsLoaded, setArtistsLoaded] = useState(false);
+  const [achievementsLoaded, setAchievementsLoaded] = useState(false);
+  
   const [songFilter, setSongFilter] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [user, setUser] = useState(null);
@@ -27,21 +33,38 @@ export const CatalogProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setIsAdmin(!!currentUser); // Replace with your actual Admin logic (e.g. check email)
+      setIsAdmin(!!currentUser); 
     });
     return () => unsubscribe();
   }, []);
 
-  // 2. Fetch Public Data (Songs, Artists, Achievements)
+  // 2. Data Listeners (Songs, Artists, Achievements)
   useEffect(() => {
+    // Songs Listener
     const unsubSongs = onSnapshot(collection(db, 'songs'), (snapshot) => {
       setSongs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setSongsLoaded(true); // Mark songs as loaded
+    }, (error) => {
+        console.error("Error loading songs:", error);
+        setSongsLoaded(true); // Stop loading even on error so app doesn't freeze
     });
+
+    // Artists Listener
     const unsubArtists = onSnapshot(collection(db, 'artists'), (snapshot) => {
       setArtists(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setArtistsLoaded(true); // Mark artists as loaded
+    }, (error) => {
+        console.error("Error loading artists:", error);
+        setArtistsLoaded(true);
     });
+
+    // Achievements Listener
     const unsubAchievements = onSnapshot(collection(db, 'achievements'), (snapshot) => {
       setAchievements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setAchievementsLoaded(true); // Mark achievements as loaded
+    }, (error) => {
+        console.error("Error loading achievements:", error);
+        setAchievementsLoaded(true);
     });
 
     return () => {
@@ -51,29 +74,20 @@ export const CatalogProvider = ({ children }) => {
     };
   }, []);
 
-  // 3. Fetch Queries (User Specific)
-  // This logic ensures Viewers ONLY see their own queries.
+  // 3. Queries Listener
   useEffect(() => {
-    let q;
-
     if (!user) {
       setQueries([]);
       return;
     }
 
-    if (isAdmin) {
-      // NOTE: If you want Admin to see ONLY their own queries on the user-facing page, 
-      // change this to use 'where userId' as well. 
-      // Currently: Admin sees ALL queries (useful for the Admin Dashboard page).
-      q = collection(db, 'queries');
-    } else {
-      // Regular User: Sees ONLY their own queries
-      q = query(collection(db, 'queries'), where('userId', '==', user.uid));
-    }
+    let q = isAdmin 
+      ? collection(db, 'queries') 
+      : query(collection(db, 'queries'), where('userId', '==', user.uid));
 
     const unsubQueries = onSnapshot(q, (snapshot) => {
-      // Sort by createdAt descending (newest first)
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Sort: Newest first
       data.sort((a, b) => {
         const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
         const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
@@ -85,15 +99,20 @@ export const CatalogProvider = ({ children }) => {
     return () => unsubQueries();
   }, [isAdmin, user]);
 
-  // 4. Helper to enrich songs
+  // 4. Calculate Global Loading State
+  // Loading is TRUE if ANY of the three parts are NOT loaded yet
+  const loading = !songsLoaded || !artistsLoaded || !achievementsLoaded;
+
+  // 5. Enrich Songs
   const enrichedSongs = useMemo(() => {
+    if (loading) return []; // Don't compute until loaded
     return songs.map(song => {
       const artist = artists.find(a => a.id === song.artistId);
       return { ...song, artistName: artist ? artist.name : 'Unknown Artist' };
     });
-  }, [songs, artists]);
+  }, [songs, artists, loading]);
 
-  // 5. Admin Safe Write Helper
+  // 6. Admin Helpers
   const safeWrite = async (operation, collectionName) => {
     if (!isAdmin) {
       alert("Permission denied. Admin only.");
@@ -107,7 +126,6 @@ export const CatalogProvider = ({ children }) => {
     }
   };
 
-  // 6. CRUD Operations (Admin)
   const addSong = (data) => safeWrite(() => addDoc(collection(db, 'songs'), data), 'songs');
   const updateSong = (id, data) => safeWrite(() => updateDoc(doc(db, 'songs', String(id)), data), 'songs');
   const deleteSong = (id) => safeWrite(() => deleteDoc(doc(db, 'songs', String(id))), 'songs');
@@ -120,9 +138,6 @@ export const CatalogProvider = ({ children }) => {
   const updateAchievement = (id, data) => safeWrite(() => updateDoc(doc(db, 'achievements', String(id)), data), 'achievements');
   const deleteAchievement = (id) => safeWrite(() => deleteDoc(doc(db, 'achievements', String(id))), 'achievements');
   
-  // 7. QUERY OPERATIONS (User & Admin)
-  
-  // Create
   const addQuery = async (queryData) => {
     try {
       await addDoc(collection(db, 'queries'), {
@@ -138,26 +153,14 @@ export const CatalogProvider = ({ children }) => {
     }
   };
 
-  // Update (User can update own query)
   const updateQuery = async (id, data) => {
     if (!user) return;
-    try {
-      await updateDoc(doc(db, 'queries', String(id)), data);
-    } catch (error) {
-      console.error("Error updating query:", error);
-      throw error;
-    }
+    await updateDoc(doc(db, 'queries', String(id)), data);
   };
 
-  // Delete (User can delete own query)
   const deleteQuery = async (id) => {
     if (!user) return;
-    try {
-      await deleteDoc(doc(db, 'queries', String(id)));
-    } catch (error) {
-      console.error("Error deleting query:", error);
-      throw error;
-    }
+    await deleteDoc(doc(db, 'queries', String(id)));
   };
 
   const applySongFilter = (filter) => setSongFilter(filter);
@@ -168,15 +171,19 @@ export const CatalogProvider = ({ children }) => {
     artists,
     achievements,
     queries,        
-    addQuery,       
-    updateQuery,    // <--- Added
-    deleteQuery,    // <--- Added
+    addQuery, updateQuery, deleteQuery,    
     addSong, updateSong, deleteSong,
     addArtist, updateArtist, deleteArtist,
     addAchievement, updateAchievement, deleteAchievement,
     songFilter, applySongFilter, clearSongFilter,
     isAdmin, currentUser: user,
-  }), [enrichedSongs, artists, achievements, queries, songFilter, isAdmin, user]);
+    loading // Export the robust loading state
+  }), [
+    enrichedSongs, artists, achievements, queries, songFilter, isAdmin, user, 
+    loading, // Add loading to dependency array
+    // Include functions in dependency array or omit them if they are stable ref:
+    // Ideally wrap functions in useCallback, but for now this is fine.
+  ]);
 
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;
 };
@@ -185,4 +192,4 @@ export const useCatalog = () => {
   const context = useContext(CatalogContext);
   if (!context) throw new Error('useCatalog must be used within a CatalogProvider');
   return context;
-};
+}; 
