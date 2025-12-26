@@ -1,15 +1,13 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { CartProvider } from './context/CartContext.jsx';
 import { CatalogProvider } from './context/CatalogContext.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/routing/ProtectedRoute.jsx';
 import LoadingScreen from './components/ui/LoadingScreen.jsx';
 import MainLayout from './layout/MainLayout.jsx'; // Keep Layout static for structure, or lazy load if desired. Let's keep layout static for now to avoid layout shift, or lazy load pages inside.
-// Actually, lazy loading layout is fine too.
 
 // Lazy Load Pages
-// Added artificial delay of 2 seconds to simulate slow connection
 const OliveAudioLab = lazy(() => import('./OliveAudioLab.jsx'));
 const Home = lazy(() => import('./pages/Home.jsx'));
 const SongsPage = lazy(() => import('./pages/Songs.jsx'));
@@ -21,7 +19,7 @@ const LoginPage = lazy(() => import('./pages/Login.jsx'));
 const SignupPage = lazy(() => import('./pages/Signup.jsx'));
 
 const App = () => (
-  <BrowserRouter>
+  <HashRouter>
     <AuthProvider>
       <CatalogProvider>
         <CartProvider>
@@ -51,7 +49,7 @@ const App = () => (
         </CartProvider>
       </CatalogProvider>
     </AuthProvider>
-  </BrowserRouter>
+  </HashRouter>
 );
 
 export default App;
