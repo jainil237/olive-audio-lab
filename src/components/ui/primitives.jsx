@@ -36,8 +36,8 @@ export const SectionHeading = ({ children, align = 'center', eyebrow }) => (
   </div>
 );
 
-export const GlassCard = ({ children, className = '' }) => (
-  <div className={clsx('bg-zinc-900/40 backdrop-blur-sm border border-zinc-800 p-8 rounded-3xl hover:border-zinc-600 transition-colors duration-500', className)}>
+export const GlassCard = ({ children, className = '', ...props }) => (
+  <div className={clsx('bg-zinc-900/40 backdrop-blur-sm border border-zinc-800 p-8 rounded-3xl hover:border-zinc-600 transition-colors duration-500', className)} {...props}>
     {children}
   </div>
 );

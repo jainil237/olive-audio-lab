@@ -9,7 +9,7 @@ import { AppButton } from '../components/ui/primitives.jsx';
 import sonicLogo from '.././assets/OliveGreenLogo.png';
 
 const navItems = [
-  { label: 'Landing', to: '/' },
+  { label: 'Home', to: '/' },
   { label: 'Overview', to: '/overview' },
   { label: 'Songs / Albums', to: '/songs' },
   { label: 'Artists', to: '/artists' },
@@ -57,6 +57,16 @@ const MainLayout = () => {
                 {item.label}
               </NavLink>
             ))}
+            {user && user.role === 'admin' && (
+              <NavLink
+                to="/content"
+                className={({ isActive }) =>
+                  `text-sm font-medium transition-colors ${isActive ? 'text-white' : 'text-lime-400 hover:text-lime-300'}`
+                }
+              >
+                Manage Content
+              </NavLink>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
@@ -74,7 +84,7 @@ const MainLayout = () => {
                 className="hidden md:inline-flex gap-2 border border-white/10"
                 onClick={() => {
                   logout();
-                  navigate('/login', { replace: true });
+                  navigate('/', { replace: true });
                 }}
               >
                 <span className="text-xs uppercase tracking-[0.3em] text-lime-300/80">{user.role}</span>
@@ -113,7 +123,7 @@ const MainLayout = () => {
                 setMobileOpen(false);
                 if (user) {
                   logout();
-                  navigate('/login', { replace: true });
+                  navigate('/', { replace: true });
                 } else {
                   navigate('/login');
                 }

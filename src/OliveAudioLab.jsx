@@ -5,15 +5,18 @@ import {
 } from 'lucide-react';
 // import { useCart } from './context/CartContext.jsx';
 import { useCatalog } from './context/CatalogContext.jsx';
-import { TESTIMONIALS_CLIENTS, EXPERT_REVIEWS } from './data/catalog.js';
+import { useAuth } from './context/AuthContext.jsx';
 import sonicLogo from './assets/OliveGreenLogo.png';
 import oliveBrick from './assets/OliveAudioLabBrick.png';
+import { useNavigate } from 'react-router-dom';
 
 // --- COMPONENTS ---
 import SongCard from './components/SongCard.jsx';
 import SongStreamingDialog from './components/SongStreamingDialog.jsx';
 import ArtistCard from './components/ArtistCard.jsx';
 import { motion } from 'framer-motion';
+
+// ... (Button, SectionHeading, Card components stay same)
 
 const Button = ({ children, variant = 'primary', onClick, className = '' }) => {
   const baseStyle = "px-6 py-3 rounded-full font-medium transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2";
@@ -43,8 +46,12 @@ const Card = ({ children, className = '' }) => (
   </div>
 );
 
+
 const OliveAudioLab = () => {
-  const { songs, artists, achievements } = useCatalog();
+  const { songs, artists, achievements, testimonials, reviews } = useCatalog();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   const spotlightSongs = songs.filter(s => s.showOnHome);
   const spotlightArtists = artists.filter(a => a.showOnHome);
   const spotlightAchievements = achievements.filter(a => a.showOnHome);
@@ -66,13 +73,6 @@ const OliveAudioLab = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  // Player Logic (Legacy/Sticky - Simplified or removed active usage if conflicting)
-  // const togglePlay = (song) => {
-  //   // Legacy logic...
-  // };
-
-  // const addToCart = (song) => { ... };
 
   // Scroll to section helper
   const scrollTo = (id) => {
@@ -107,6 +107,14 @@ const OliveAudioLab = () => {
                 {item}
               </button>
             ))}
+            {!user && (
+              <button
+                onClick={() => navigate('/login')}
+                className="text-sm font-medium text-lime-400 hover:text-lime-300 transition-colors ml-4"
+              >
+                Sign In
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
@@ -126,6 +134,11 @@ const OliveAudioLab = () => {
                 {item}
               </button>
             ))}
+            {!user && (
+              <button onClick={() => navigate('/login')} className="text-left border-b border-zinc-800 pb-4 text-lime-400">
+                Sign In
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -158,10 +171,8 @@ const OliveAudioLab = () => {
             Founder of <span className="text-white font-medium">Olive Audio Lab</span>.
             Sculpting sound for the next generation of artists.
           </p>
-          <div className="flex flex-col md:flex-row justify-start gap-4">
-            <Button variant="ghost" className="order-3 md:order-none" onClick={() => window.location.assign('/login')}>
-              Sign in to dashboard
-            </Button>
+          <div className="flex flex-col md:flex-row justify-center gap-4">
+            {/* Removed "Sign in to dashboard" button from here as requested */}
             <Button onClick={() => scrollTo('work')}>
               Listen to Works <ChevronRight size={16} />
             </Button>
@@ -175,7 +186,12 @@ const OliveAudioLab = () => {
       {/* --- SELECTED WORKS (Discography) --- */}
       <section id="work" className="py-24 bg-zinc-950">
         <div className="container mx-auto px-6">
-          <SectionHeading>Selected Works</SectionHeading>
+          <div className="flex items-center justify-between">
+            <SectionHeading>Selected Works</SectionHeading>
+            <Button variant="ghost" onClick={() => navigate('/songs')} className="text-sm">
+              View more →
+            </Button>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {spotlightSongs.length > 0 ? (
@@ -190,7 +206,7 @@ const OliveAudioLab = () => {
             ) : (
               <div className="col-span-full py-12 text-center text-zinc-500 border border-dashed border-zinc-800 rounded-2xl">
                 <p>No selected works to display.</p>
-                <p className="text-xs mt-2">Go to <span className="text-lime-400 cursor-pointer" onClick={() => window.location.assign('/songs')}>Catalogue</span> and check "Show on Home Page".</p>
+                <p className="text-xs mt-2">Go to <span className="text-lime-400 cursor-pointer" onClick={() => navigate('/songs')}>Catalogue</span> and check "Show on Home Page".</p>
               </div>
             )}
           </div>
@@ -202,7 +218,7 @@ const OliveAudioLab = () => {
         <div className="container mx-auto px-6 relative z-10">
           <div className="flex items-center justify-between">
             <SectionHeading>Achievements</SectionHeading>
-            <Button variant="ghost" onClick={() => window.location.assign('/achievements')} className="text-sm">
+            <Button variant="ghost" onClick={() => navigate('/achievements')} className="text-sm">
               View more →
             </Button>
           </div>
@@ -230,7 +246,7 @@ const OliveAudioLab = () => {
                 <h3 className="text-2xl font-bold flex items-center gap-3">
                   <Mic2 className="text-lime-500" /> Featured Artists
                 </h3>
-                <Button variant="ghost" onClick={() => window.location.assign('/artists')} className="text-sm">
+                <Button variant="ghost" onClick={() => navigate('/artists')} className="text-sm">
                   View more →
                 </Button>
               </div>
@@ -241,26 +257,30 @@ const OliveAudioLab = () => {
               </div>
             </div>
 
-            {/* Testimonials Column */}
+            {/* Testimonials Column (Dynamic) */}
             <div className="flex-1">
               <h3 className="text-2xl font-bold mb-8 flex items-center gap-3">
                 <Quote className="text-lime-500" /> Client Stories
               </h3>
               <div className="grid gap-6">
-                {TESTIMONIALS_CLIENTS.map((t) => (
-                  <Card key={t.id} className="p-6">
-                    <p className="text-zinc-300 italic mb-4 leading-relaxed">"{t.text}"</p>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-bold text-white text-sm">{t.name}</p>
-                        <p className="text-lime-500 text-xs">{t.role}</p>
-                      </div>
-                      <div className="flex text-amber-500">
-                        {[...Array(5)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
+                {testimonials.length > 0 ? (
+                  testimonials.map((t) => (
+                    <div key={t.id} className="bg-zinc-950 border border-zinc-800 p-8 rounded-3xl hover:border-zinc-700 transition-colors">
+                      <p className="text-zinc-300 italic mb-6 leading-relaxed">"{t.text}"</p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-white text-base">{t.name}</p>
+                          <p className="text-lime-500 text-sm">{t.role}</p>
+                        </div>
+                        <div className="flex gap-1 text-amber-500">
+                          {[...Array(Number(t.rating) || 5)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
+                        </div>
                       </div>
                     </div>
-                  </Card>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-zinc-500 italic">No client stories yet.</p>
+                )}
               </div>
             </div>
 
@@ -268,7 +288,7 @@ const OliveAudioLab = () => {
         </div>
       </section>
 
-      {/* --- INDUSTRY RECOGNITION (Experts) --- */}
+      {/* --- INDUSTRY RECOGNITION (Experts - Dynamic) --- */}
       <section id="reviews" className="py-24 bg-gradient-to-b from-zinc-950 to-black">
         <div className="container mx-auto px-6 text-center">
           <SectionHeading>Industry Recognition</SectionHeading>
@@ -277,18 +297,22 @@ const OliveAudioLab = () => {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {EXPERT_REVIEWS.map((review) => (
-              <div key={review.id} className="bg-zinc-900 p-10 rounded-3xl border border-zinc-800 relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-lime-500 to-emerald-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
-                <h4 className="font-serif text-3xl mb-6 text-white">{review.source}</h4>
-                <p className="text-zinc-400 text-lg leading-relaxed mb-6">
-                  {review.text}
-                </p>
-                <div className="flex justify-center text-lime-500 gap-1">
-                  {[...Array(review.rating)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
+            {reviews.length > 0 ? (
+              reviews.map((review) => (
+                <div key={review.id} className="bg-zinc-900 p-10 rounded-3xl border border-zinc-800 relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-lime-500 to-emerald-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
+                  <h4 className="font-serif text-3xl mb-6 text-white">{review.source}</h4>
+                  <p className="text-zinc-400 text-lg leading-relaxed mb-6">
+                    {review.text}
+                  </p>
+                  <div className="flex justify-center text-lime-500 gap-1">
+                    {[...Array(review.rating || 5)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-zinc-500 col-span-full">No industry reviews yet.</p>
+            )}
           </div>
         </div>
       </section>
@@ -305,7 +329,7 @@ const OliveAudioLab = () => {
               Ready to take your sound to the next level? Olive Audio Lab is currently accepting new projects for Q4.
             </p>
             <div className="relative z-10">
-              <Button onClick={() => window.location.href = navigate('/queries')}>
+              <Button onClick={() => navigate('/queries')}>
                 Get a Quote
               </Button>
             </div>

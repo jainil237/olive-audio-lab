@@ -8,11 +8,14 @@ import { useCatalog } from '../context/CatalogContext.jsx';
 // import { useCart } from '../context/CartContext.jsx';
 import SongStreamingDialog from '../components/SongStreamingDialog.jsx';
 
+import Modal from '../components/ui/Modal.jsx';
+
 const Home = () => {
   const { songs, artists, achievements } = useCatalog();
   // const { addItem } = useCart();
   const navigate = useNavigate();
   const [streamSong, setStreamSong] = useState(null);
+  const [showLocation, setShowLocation] = useState(false);
 
   const spotlightSongs = songs.filter(s => s.showOnHome);
   const spotlightArtists = artists.filter(a => a.showOnHome);
@@ -34,10 +37,13 @@ const Home = () => {
             Crafted productions, mixes and masters for the next generation of artists.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <AppButton variant="primary" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <AppButton variant="primary" onClick={() => setShowLocation(true)}>
               Experience the Lab
             </AppButton>
-            <AppButton variant="secondary" onClick={() => (window.location.href = 'mailto:jerry@oliveaudiolab.com')}>
+            <AppButton
+              variant="secondary"
+              onClick={() => document.getElementById('collaboration')?.scrollIntoView({ behavior: 'smooth' })}
+            >
               Start a project
             </AppButton>
           </div>
@@ -95,7 +101,7 @@ const Home = () => {
         <AchievementTimeline achievements={spotlightAchievements} />
       </section>
 
-      <GlassCard className="bg-zinc-900/70">
+      <GlassCard id="collaboration" className="bg-zinc-900/70">
         <div className="flex flex-col md:flex-row gap-6 md:items-center md:justify-between">
           <div className="space-y-3 max-w-2xl">
             <p className="uppercase tracking-[0.35em] text-xs text-lime-300/80">Collaboration</p>
@@ -111,6 +117,24 @@ const Home = () => {
       </GlassCard>
 
       <SongStreamingDialog open={!!streamSong} onClose={() => setStreamSong(null)} song={streamSong} />
+
+      <Modal open={showLocation} onClose={() => setShowLocation(false)} title="Visit the Lab">
+        <div className="w-full aspect-video rounded-xl overflow-hidden border border-zinc-800">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3416.128622780875!2d72.56790927490577!3d23.120800312656158!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395e8258323fdb07%3A0x3edf5362871a858c!2sAMRAKUNJ%20BUSINESS%20CENTRE%2C%20Chandkheda%2C%20Ahmedabad%2C%20Gujarat%20382424!5e1!3m2!1sen!2sin!4v1766769209540!5m2!1sen!2sin"
+            width="100%"
+            height="100%"
+            style={{ border: 0 }}
+            allowFullScreen=""
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            title="Olive Audio Lab Location"
+          />
+        </div>
+        <p className="text-center text-sm text-zinc-400 mt-2">
+          Amrakunj Business Centre, Chandkheda, Ahmedabad, Gujarat 382424
+        </p>
+      </Modal>
     </div>
   );
 };

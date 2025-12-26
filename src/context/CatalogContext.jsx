@@ -1,17 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { db, auth } from '../config/firebase';
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
+import { db } from '../config/firebase';
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
   onSnapshot,
   query,
   where,
-  setDoc 
+  setDoc
 } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
+import { useAuth } from '../context/AuthContext';
 
 const CatalogContext = createContext();
 
@@ -79,25 +79,22 @@ export const CatalogProvider = ({ children }) => {
   const [songs, setSongs] = useState([]);
   const [artists, setArtists] = useState([]);
   const [achievements, setAchievements] = useState([]);
+  const [testimonials, setTestimonials] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [landingSelection, setLandingSelection] = useState(() => normalizeLandingSelection());
-  
+
   // --- ROBUST LOADING STATE ---
   const [songsLoaded, setSongsLoaded] = useState(false);
   const [artistsLoaded, setArtistsLoaded] = useState(false);
   const [achievementsLoaded, setAchievementsLoaded] = useState(false);
-  
+  const [testimonialsLoaded, setTestimonialsLoaded] = useState(false);
+  const [reviewsLoaded, setReviewsLoaded] = useState(false);
+
   const [songFilter, setSongFilter] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [user, setUser] = useState(null);
   const [queries, setQueries] = useState([]);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setIsAdmin(!!currentUser); 
-    });
-    return () => unsubscribe();
-  }, []);
+  // Use AuthContext instead of local state
+  const { user, isAdmin } = useAuth();
 
   useEffect(() => {
     const landingDocRef = doc(db, 'landingConfig', LANDING_CONFIG_DOC_ID);
@@ -119,30 +116,42 @@ export const CatalogProvider = ({ children }) => {
       setSongs(snapshot.docs.map(doc => ({ id: doc.id, ...normalizeSong(doc.data()) })));
       setSongsLoaded(true);
     }, (error) => {
-        console.error("Error loading songs:", error);
-        setSongsLoaded(true);
+      console.error("Error loading songs:", error);
+      setSongsLoaded(true);
     });
 
     const unsubArtists = onSnapshot(collection(db, 'artists'), (snapshot) => {
       setArtists(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setArtistsLoaded(true);
     }, (error) => {
-        console.error("Error loading artists:", error);
-        setArtistsLoaded(true);
+      console.error("Error loading artists:", error);
+      setArtistsLoaded(true);
     });
 
     const unsubAchievements = onSnapshot(collection(db, 'achievements'), (snapshot) => {
       setAchievements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setAchievementsLoaded(true);
     }, (error) => {
-        console.error("Error loading achievements:", error);
-        setAchievementsLoaded(true);
+      console.error("Error loading achievements:", error);
+      setAchievementsLoaded(true);
     });
+
+    const unsubTestimonials = onSnapshot(collection(db, 'testimonials'), (snapshot) => {
+      setTestimonials(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setTestimonialsLoaded(true);
+    }, (error) => console.error("Error loading testimonials:", error));
+
+    const unsubReviews = onSnapshot(collection(db, 'reviews'), (snapshot) => {
+      setReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setReviewsLoaded(true);
+    }, (error) => console.error("Error loading reviews:", error));
 
     return () => {
       unsubSongs();
       unsubArtists();
       unsubAchievements();
+      unsubTestimonials();
+      unsubReviews();
     };
   }, []);
 
@@ -152,8 +161,8 @@ export const CatalogProvider = ({ children }) => {
       return;
     }
 
-    let q = isAdmin 
-      ? collection(db, 'queries') 
+    let q = isAdmin
+      ? collection(db, 'queries')
       : query(collection(db, 'queries'), where('userId', '==', user.uid));
 
     const unsubQueries = onSnapshot(q, (snapshot) => {
@@ -169,7 +178,7 @@ export const CatalogProvider = ({ children }) => {
     return () => unsubQueries();
   }, [isAdmin, user]);
 
-  const loading = !songsLoaded || !artistsLoaded || !achievementsLoaded;
+  const loading = !songsLoaded || !artistsLoaded || !achievementsLoaded || !testimonialsLoaded || !reviewsLoaded;
 
   const enrichedSongs = useMemo(() => {
     if (loading) return [];
@@ -237,6 +246,36 @@ export const CatalogProvider = ({ children }) => {
     'achievements'
   ), [safeWrite]);
 
+  const addTestimonial = useCallback((data) => safeWrite(
+    () => addDoc(collection(db, 'testimonials'), data),
+    'testimonials'
+  ), [safeWrite]);
+
+  const updateTestimonial = useCallback((id, data) => safeWrite(
+    () => updateDoc(doc(db, 'testimonials', String(id)), data),
+    'testimonials'
+  ), [safeWrite]);
+
+  const deleteTestimonial = useCallback((id) => safeWrite(
+    () => deleteDoc(doc(db, 'testimonials', String(id))),
+    'testimonials'
+  ), [safeWrite]);
+
+  const addReview = useCallback((data) => safeWrite(
+    () => addDoc(collection(db, 'reviews'), data),
+    'reviews'
+  ), [safeWrite]);
+
+  const updateReview = useCallback((id, data) => safeWrite(
+    () => updateDoc(doc(db, 'reviews', String(id)), data),
+    'reviews'
+  ), [safeWrite]);
+
+  const deleteReview = useCallback((id) => safeWrite(
+    () => deleteDoc(doc(db, 'reviews', String(id))),
+    'reviews'
+  ), [safeWrite]);
+
   const updateLandingSelection = useCallback((data) => safeWrite(
     () => setDoc(doc(db, 'landingConfig', LANDING_CONFIG_DOC_ID), normalizeLandingSelection(data), { merge: true }),
     'landingConfig'
@@ -274,22 +313,28 @@ export const CatalogProvider = ({ children }) => {
     songs: enrichedSongs,
     artists,
     achievements,
-    queries,        
-    addQuery, updateQuery, deleteQuery,    
+    testimonials,
+    reviews,
+    queries,
+    addQuery, updateQuery, deleteQuery,
     addSong, updateSong, deleteSong,
     addArtist, updateArtist, deleteArtist,
     addAchievement, updateAchievement, deleteAchievement,
+    addTestimonial, updateTestimonial, deleteTestimonial,
+    addReview, updateReview, deleteReview,
     landingSelection, updateLandingSelection,
     songFilter, applySongFilter, clearSongFilter,
     isAdmin, currentUser: user,
     loading
   }), [
-    enrichedSongs, artists, achievements, queries, landingSelection,
+    enrichedSongs, artists, achievements, testimonials, reviews, queries, landingSelection,
     songFilter, applySongFilter, clearSongFilter,
     addQuery, updateQuery, deleteQuery,
     addSong, updateSong, deleteSong,
     addArtist, updateArtist, deleteArtist,
     addAchievement, updateAchievement, deleteAchievement,
+    addTestimonial, updateTestimonial, deleteTestimonial,
+    addReview, updateReview, deleteReview,
     updateLandingSelection,
     isAdmin, user, loading
   ]);
