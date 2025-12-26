@@ -24,7 +24,4 @@ seed.js
 *.njsproj
 *.sln
 *.sw?
-*.jpg
-*.png
 *.webp  
-*.svg

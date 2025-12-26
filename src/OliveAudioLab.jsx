@@ -133,7 +133,7 @@ const OliveAudioLab = () => {
       <header className="relative pt-40 pb-20 md:pt-60 md:pb-40 px-6 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none">
           {/* Background Image - contained to sides */}
-          <div className="absolute inset-x-0 top-0 bottom-0 bg-cover bg-center bg-no-repeat opacity-80" style={{ backgroundImage: 'url("/src/assets/OliveAudioLabBrick.jpg")', marginTop: '-18.75rem' }} />
+          <div className="absolute inset-x-0 top-0 bottom-0 bg-cover bg-center bg-no-repeat opacity-80" style={{ backgroundImage: 'url("/src/assets/OliveAudioLabBrick.png")', marginTop: '-18.75rem' }} />
 
           {/* Dark gradient overlay for text area */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/60" />
