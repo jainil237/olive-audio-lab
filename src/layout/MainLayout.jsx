@@ -6,6 +6,7 @@ import { Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import BackToTopButton from '../components/BackToTopButton.jsx';
 import { AppButton } from '../components/ui/primitives.jsx';
+import sonicLogo from '.././assets/OliveGreenLogo.png';
 
 const navItems = [
   { label: 'Landing', to: '/' },
@@ -38,8 +39,8 @@ const MainLayout = () => {
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => navigate('/')}
           >
-            <div className="w-8 h-8 bg-gradient-to-br from-lime-400 to-emerald-600 rounded-full flex items-center justify-center">
-              <span className="font-bold text-black text-xs">OL</span>
+            <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-black/20">
+              <img src={sonicLogo} alt="Olive Audio Lab" className="w-full h-full object-cover" />
             </div>
             <span className="font-bold text-xl tracking-tight">Olive Audio Lab</span>
           </button>
@@ -138,9 +139,9 @@ const MainLayout = () => {
         <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-zinc-500 text-sm">
           <p>© {new Date().getFullYear()} Olive Audio Lab. All rights reserved.</p>
           <div className="flex gap-6 mt-4 md:mt-0">
-            <a href="#" className="hover:text-white">Instagram</a>
-            <a href="#" className="hover:text-white">Twitter</a>
-            <a href="#" className="hover:text-white">SoundCloud</a>
+            <a href="https://www.instagram.com/jerrymartin050?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" className="hover:text-white">Instagram</a>
+            <a href="https://open.spotify.com/artist/7HLVwydcZhCpj92ZDUCxlw?si=APfyqvR2SZeX0nJCpyre0A" className="hover:text-white">Spotify</a>
+            <a href="https://music.apple.com/us/artist/jerry-martin/1542172902" className="hover:text-white">Apple Music</a>
           </div>
         </div>
       </footer>

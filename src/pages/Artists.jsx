@@ -14,6 +14,7 @@ const INITIAL_FORM = {
   genres: '',
   honors: '',
   notableWorks: '',
+  showOnHome: false,
 };
 
 const ArtistsPage = () => {
@@ -34,15 +35,18 @@ const ArtistsPage = () => {
   const handleViewSongs = (artist) => {
     // UPDATED: Navigate with query param so Songs page filters automatically
     if (!artist || !artist.id) {
-        console.error("Missing artist ID!");
-        return;
+      console.error("Missing artist ID!");
+      return;
     }
     navigate(`/songs?artists=${artist.id}`);
   };
 
   const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = event.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
   const parseList = (value) => value.split(',').map((item) => item.trim()).filter(Boolean);
@@ -62,6 +66,7 @@ const ArtistsPage = () => {
       genres: artist.genres?.join(', ') || '',
       honors: artist.honors?.join(', ') || '',
       notableWorks: artist.notableWorks?.join(', ') || '',
+      showOnHome: artist.showOnHome || false,
     });
     setIsFormOpen(true);
   };
@@ -89,6 +94,7 @@ const ArtistsPage = () => {
         genres: parseList(formData.genres),
         honors: parseList(formData.honors),
         notableWorks: parseList(formData.notableWorks),
+        showOnHome: formData.showOnHome,
       };
 
       if (editingId) {
@@ -114,13 +120,13 @@ const ArtistsPage = () => {
           <SectionHeading align="left" eyebrow="Collaborators">Artists & Partners</SectionHeading>
           <AppButton variant="ghost" onClick={() => window.location.assign('/songs')}>Explore catalogue →</AppButton>
         </div>
-        
+
         <div className="flex items-start justify-between gap-4">
           <p className="text-zinc-400 max-w-2xl">
             A curated network of vocalists, instrumentalists and producers we regularly work with at Olive Audio Lab.
           </p>
           {isAdmin && (
-            <button 
+            <button
               onClick={openAddModal}
               className="flex items-center gap-2 px-4 py-2 bg-lime-500/20 text-lime-400 hover:bg-lime-500/30 rounded-full text-sm font-semibold transition-colors border border-lime-500/30"
             >
@@ -131,10 +137,10 @@ const ArtistsPage = () => {
 
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {artists.map((artist) => (
-            <ArtistCard 
-              key={artist.id} 
-              artist={artist} 
-              onClick={setSelectedArtist} 
+            <ArtistCard
+              key={artist.id}
+              artist={artist}
+              onClick={setSelectedArtist}
               isAdmin={isAdmin}
               onEdit={handleEdit}
               onDelete={handleDelete}
@@ -146,6 +152,19 @@ const ArtistsPage = () => {
       <Modal open={isFormOpen} onClose={() => setIsFormOpen(false)} title={editingId ? 'Edit Artist' : 'Add New Artist'}>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-2 flex items-center gap-3 p-4 rounded-2xl border border-white/10 bg-black/40">
+              <input
+                type="checkbox"
+                name="showOnHome"
+                id="showOnHome"
+                checked={formData.showOnHome}
+                onChange={handleChange}
+                className="w-5 h-5 rounded border-zinc-600 text-lime-500 focus:ring-lime-500 bg-black/50"
+              />
+              <label htmlFor="showOnHome" className="text-sm text-zinc-300 select-none cursor-pointer">
+                Show on Home Page (Featured Artists)
+              </label>
+            </div>
             <div className="space-y-2">
               <label className="text-sm text-zinc-400">Name</label>
               <input name="name" value={formData.name} onChange={handleChange} className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-lime-400 focus:outline-none" required />

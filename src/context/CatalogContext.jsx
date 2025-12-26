@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { db, auth } from '../config/firebase';
 import { 
   collection, 
@@ -8,16 +8,78 @@ import {
   doc, 
   onSnapshot,
   query,
-  where 
+  where,
+  setDoc 
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 
 const CatalogContext = createContext();
 
+const LANDING_CONFIG_DOC_ID = 'default';
+
+const normalizeLandingSelection = (data = {}) => ({
+  songIds: Array.isArray(data.songIds) ? data.songIds.map(String) : [],
+  artistIds: Array.isArray(data.artistIds) ? data.artistIds.map(String) : [],
+  achievementIds: Array.isArray(data.achievementIds) ? data.achievementIds.map(String) : [],
+});
+
+const normalizeSong = (song = {}) => {
+  const streaming = Object.fromEntries(
+    Object.entries(song.streaming || {}).filter(([, url]) => typeof url === 'string' && url.trim())
+  );
+
+  const artistIds = Array.isArray(song.artistIds)
+    ? song.artistIds.map(String)
+    : song.artistId
+      ? [String(song.artistId)]
+      : [];
+
+  const primaryArtistId = artistIds[0] ?? (song.artistId ? String(song.artistId) : null);
+
+  const rawEmbeds = (song.embeds && typeof song.embeds === 'object') ? song.embeds : {};
+  const normalizedEmbeds = Object.entries(rawEmbeds).reduce((acc, [provider, html]) => {
+    if (typeof html === 'string') {
+      const trimmed = html.trim();
+      if (trimmed) {
+        acc[provider] = trimmed;
+      }
+    }
+    return acc;
+  }, {});
+
+  if (typeof song.embed === 'string') {
+    const legacy = song.embed.trim();
+    if (legacy) {
+      if (legacy.includes('soundcloud') && !normalizedEmbeds.soundcloud) {
+        normalizedEmbeds.soundcloud = legacy;
+      } else if (legacy.includes('apple') && !normalizedEmbeds.apple) {
+        normalizedEmbeds.apple = legacy;
+      } else if (!normalizedEmbeds.primary) {
+        normalizedEmbeds.primary = legacy;
+      }
+    }
+  }
+
+  const primaryEmbed = normalizedEmbeds.apple
+    || normalizedEmbeds.soundcloud
+    || normalizedEmbeds.primary
+    || '';
+
+  return {
+    ...song,
+    streaming,
+    embeds: normalizedEmbeds,
+    embed: primaryEmbed,
+    artistIds,
+    ...(primaryArtistId ? { artistId: primaryArtistId } : {}),
+  };
+};
+
 export const CatalogProvider = ({ children }) => {
   const [songs, setSongs] = useState([]);
   const [artists, setArtists] = useState([]);
   const [achievements, setAchievements] = useState([]);
+  const [landingSelection, setLandingSelection] = useState(() => normalizeLandingSelection());
   
   // --- ROBUST LOADING STATE ---
   const [songsLoaded, setSongsLoaded] = useState(false);
@@ -29,7 +91,6 @@ export const CatalogProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [queries, setQueries] = useState([]);
 
-  // 1. Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -38,30 +99,41 @@ export const CatalogProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  // 2. Data Listeners (Songs, Artists, Achievements)
   useEffect(() => {
-    // Songs Listener
-    const unsubSongs = onSnapshot(collection(db, 'songs'), (snapshot) => {
-      setSongs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setSongsLoaded(true); // Mark songs as loaded
+    const landingDocRef = doc(db, 'landingConfig', LANDING_CONFIG_DOC_ID);
+    const unsubscribe = onSnapshot(landingDocRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setLandingSelection(normalizeLandingSelection(snapshot.data()));
+      } else {
+        setLandingSelection(normalizeLandingSelection());
+      }
     }, (error) => {
-        console.error("Error loading songs:", error);
-        setSongsLoaded(true); // Stop loading even on error so app doesn't freeze
+      console.error('Error loading landing selections:', error);
     });
 
-    // Artists Listener
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const unsubSongs = onSnapshot(collection(db, 'songs'), (snapshot) => {
+      setSongs(snapshot.docs.map(doc => ({ id: doc.id, ...normalizeSong(doc.data()) })));
+      setSongsLoaded(true);
+    }, (error) => {
+        console.error("Error loading songs:", error);
+        setSongsLoaded(true);
+    });
+
     const unsubArtists = onSnapshot(collection(db, 'artists'), (snapshot) => {
       setArtists(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setArtistsLoaded(true); // Mark artists as loaded
+      setArtistsLoaded(true);
     }, (error) => {
         console.error("Error loading artists:", error);
         setArtistsLoaded(true);
     });
 
-    // Achievements Listener
     const unsubAchievements = onSnapshot(collection(db, 'achievements'), (snapshot) => {
       setAchievements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setAchievementsLoaded(true); // Mark achievements as loaded
+      setAchievementsLoaded(true);
     }, (error) => {
         console.error("Error loading achievements:", error);
         setAchievementsLoaded(true);
@@ -74,7 +146,6 @@ export const CatalogProvider = ({ children }) => {
     };
   }, []);
 
-  // 3. Queries Listener
   useEffect(() => {
     if (!user) {
       setQueries([]);
@@ -87,7 +158,6 @@ export const CatalogProvider = ({ children }) => {
 
     const unsubQueries = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Sort: Newest first
       data.sort((a, b) => {
         const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
         const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
@@ -99,21 +169,17 @@ export const CatalogProvider = ({ children }) => {
     return () => unsubQueries();
   }, [isAdmin, user]);
 
-  // 4. Calculate Global Loading State
-  // Loading is TRUE if ANY of the three parts are NOT loaded yet
   const loading = !songsLoaded || !artistsLoaded || !achievementsLoaded;
 
-  // 5. Enrich Songs
   const enrichedSongs = useMemo(() => {
-    if (loading) return []; // Don't compute until loaded
+    if (loading) return [];
     return songs.map(song => {
-      const artist = artists.find(a => a.id === song.artistId);
-      return { ...song, artistName: artist ? artist.name : 'Unknown Artist' };
+      const artist = song.artistId ? artists.find(a => a.id === song.artistId) : null;
+      return { ...song, artistName: artist ? artist.name : song.artistName || 'Unknown Artist' };
     });
   }, [songs, artists, loading]);
 
-  // 6. Admin Helpers
-  const safeWrite = async (operation, collectionName) => {
+  const safeWrite = useCallback(async (operation, collectionName) => {
     if (!isAdmin) {
       alert("Permission denied. Admin only.");
       return null;
@@ -124,21 +190,59 @@ export const CatalogProvider = ({ children }) => {
       console.error(`Error writing to ${collectionName}:`, error);
       throw error;
     }
-  };
+  }, [isAdmin]);
 
-  const addSong = (data) => safeWrite(() => addDoc(collection(db, 'songs'), data), 'songs');
-  const updateSong = (id, data) => safeWrite(() => updateDoc(doc(db, 'songs', String(id)), data), 'songs');
-  const deleteSong = (id) => safeWrite(() => deleteDoc(doc(db, 'songs', String(id))), 'songs');
+  const addSong = useCallback((data) => safeWrite(
+    () => addDoc(collection(db, 'songs'), normalizeSong(data)),
+    'songs'
+  ), [safeWrite]);
 
-  const addArtist = (data) => safeWrite(() => addDoc(collection(db, 'artists'), data), 'artists');
-  const updateArtist = (id, data) => safeWrite(() => updateDoc(doc(db, 'artists', String(id)), data), 'artists');
-  const deleteArtist = (id) => safeWrite(() => deleteDoc(doc(db, 'artists', String(id))), 'artists');
+  const updateSong = useCallback((id, data) => safeWrite(
+    () => updateDoc(doc(db, 'songs', String(id)), normalizeSong(data)),
+    'songs'
+  ), [safeWrite]);
 
-  const addAchievement = (data) => safeWrite(() => addDoc(collection(db, 'achievements'), data), 'achievements');
-  const updateAchievement = (id, data) => safeWrite(() => updateDoc(doc(db, 'achievements', String(id)), data), 'achievements');
-  const deleteAchievement = (id) => safeWrite(() => deleteDoc(doc(db, 'achievements', String(id))), 'achievements');
-  
-  const addQuery = async (queryData) => {
+  const deleteSong = useCallback((id) => safeWrite(
+    () => deleteDoc(doc(db, 'songs', String(id))),
+    'songs'
+  ), [safeWrite]);
+
+  const addArtist = useCallback((data) => safeWrite(
+    () => addDoc(collection(db, 'artists'), data),
+    'artists'
+  ), [safeWrite]);
+
+  const updateArtist = useCallback((id, data) => safeWrite(
+    () => updateDoc(doc(db, 'artists', String(id)), data),
+    'artists'
+  ), [safeWrite]);
+
+  const deleteArtist = useCallback((id) => safeWrite(
+    () => deleteDoc(doc(db, 'artists', String(id))),
+    'artists'
+  ), [safeWrite]);
+
+  const addAchievement = useCallback((data) => safeWrite(
+    () => addDoc(collection(db, 'achievements'), data),
+    'achievements'
+  ), [safeWrite]);
+
+  const updateAchievement = useCallback((id, data) => safeWrite(
+    () => updateDoc(doc(db, 'achievements', String(id)), data),
+    'achievements'
+  ), [safeWrite]);
+
+  const deleteAchievement = useCallback((id) => safeWrite(
+    () => deleteDoc(doc(db, 'achievements', String(id))),
+    'achievements'
+  ), [safeWrite]);
+
+  const updateLandingSelection = useCallback((data) => safeWrite(
+    () => setDoc(doc(db, 'landingConfig', LANDING_CONFIG_DOC_ID), normalizeLandingSelection(data), { merge: true }),
+    'landingConfig'
+  ), [safeWrite]);
+
+  const addQuery = useCallback(async (queryData) => {
     try {
       await addDoc(collection(db, 'queries'), {
         ...queryData,
@@ -151,20 +255,20 @@ export const CatalogProvider = ({ children }) => {
       console.error("Error submitting query:", error);
       throw error;
     }
-  };
+  }, [user]);
 
-  const updateQuery = async (id, data) => {
+  const updateQuery = useCallback(async (id, data) => {
     if (!user) return;
     await updateDoc(doc(db, 'queries', String(id)), data);
-  };
+  }, [user]);
 
-  const deleteQuery = async (id) => {
+  const deleteQuery = useCallback(async (id) => {
     if (!user) return;
     await deleteDoc(doc(db, 'queries', String(id)));
-  };
+  }, [user]);
 
-  const applySongFilter = (filter) => setSongFilter(filter);
-  const clearSongFilter = () => setSongFilter(null);
+  const applySongFilter = useCallback((filter) => setSongFilter(filter), []);
+  const clearSongFilter = useCallback(() => setSongFilter(null), []);
 
   const value = useMemo(() => ({
     songs: enrichedSongs,
@@ -175,14 +279,19 @@ export const CatalogProvider = ({ children }) => {
     addSong, updateSong, deleteSong,
     addArtist, updateArtist, deleteArtist,
     addAchievement, updateAchievement, deleteAchievement,
+    landingSelection, updateLandingSelection,
     songFilter, applySongFilter, clearSongFilter,
     isAdmin, currentUser: user,
-    loading // Export the robust loading state
+    loading
   }), [
-    enrichedSongs, artists, achievements, queries, songFilter, isAdmin, user, 
-    loading, // Add loading to dependency array
-    // Include functions in dependency array or omit them if they are stable ref:
-    // Ideally wrap functions in useCallback, but for now this is fine.
+    enrichedSongs, artists, achievements, queries, landingSelection,
+    songFilter, applySongFilter, clearSongFilter,
+    addQuery, updateQuery, deleteQuery,
+    addSong, updateSong, deleteSong,
+    addArtist, updateArtist, deleteArtist,
+    addAchievement, updateAchievement, deleteAchievement,
+    updateLandingSelection,
+    isAdmin, user, loading
   ]);
 
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;
@@ -192,4 +301,4 @@ export const useCatalog = () => {
   const context = useContext(CatalogContext);
   if (!context) throw new Error('useCatalog must be used within a CatalogProvider');
   return context;
-}; 
+};

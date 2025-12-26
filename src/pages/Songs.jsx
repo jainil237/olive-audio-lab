@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Loader2, X, Filter } from 'lucide-react'; 
+import { Plus, Loader2, X, Filter } from 'lucide-react';
 import SongCard from '../components/SongCard.jsx';
 import SongStreamingDialog from '../components/SongStreamingDialog.jsx';
 import { AppButton, SectionHeading } from '../components/ui/primitives.jsx';
@@ -18,6 +18,10 @@ const INITIAL_FORM = {
   apple: '',
   tidal: '',
   qobuz: '',
+  embed: '',
+  embedApple: '',
+  embedSoundcloud: '',
+  showOnHome: false,
 };
 
 const SongsPage = () => {
@@ -31,12 +35,12 @@ const SongsPage = () => {
     applySongFilter,
     clearSongFilter,
     isAdmin,
-    loading: contextLoading 
+    loading: contextLoading
   } = useCatalog();
 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   // Local state for the modal/form
   const [streamSong, setStreamSong] = useState(null);
   const [formData, setFormData] = useState(INITIAL_FORM);
@@ -48,29 +52,29 @@ const SongsPage = () => {
   // We strictly listen to URL changes and update the Context.
   // We DO NOT listen to Context to update URL (that caused the loop).
   useEffect(() => {
-      const param = searchParams.get('artists');
-      
-      // Convert URL string "1,2,3" into Array ["1","2","3"]
-      const urlArtistIds = param ? param.split(',').map(s => s.trim()).filter(Boolean) : [];
-      
-      const currentContextIds = songFilter?.artistIds ?? [];
-      
-      // Compare arrays to avoid infinite re-renders
-      const urlKey = urlArtistIds.sort().join(',');
-      const contextKey = currentContextIds.sort().join(',');
-  
-      if (urlKey !== contextKey) {
-        // If URL is empty, clear context. If URL has data, update context.
-        if (urlArtistIds.length === 0) {
-            clearSongFilter();
-        } else {
-            applySongFilter({ artistIds: urlArtistIds });
-        }
+    const param = searchParams.get('artists');
+
+    // Convert URL string "1,2,3" into Array ["1","2","3"]
+    const urlArtistIds = param ? param.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+    const currentContextIds = songFilter?.artistIds ?? [];
+
+    // Compare arrays to avoid infinite re-renders
+    const urlKey = urlArtistIds.sort().join(',');
+    const contextKey = currentContextIds.sort().join(',');
+
+    if (urlKey !== contextKey) {
+      // If URL is empty, clear context. If URL has data, update context.
+      if (urlArtistIds.length === 0) {
+        clearSongFilter();
+      } else {
+        applySongFilter({ artistIds: urlArtistIds });
       }
+    }
   }, [searchParams, songFilter, applySongFilter, clearSongFilter]);
 
   // --- HANDLERS (Update URL Directly) ---
-  
+
   const handleClearFilters = () => {
     // Just clear URL. The useEffect above will catch this and clear the Context automatically.
     setSearchParams({}, { replace: true });
@@ -78,25 +82,25 @@ const SongsPage = () => {
 
   const toggleFilterArtist = useCallback((artistId) => {
     const sid = String(artistId);
-    
+
     // 1. Get current IDs from URL (Source of Truth)
     const currentParam = searchParams.get('artists');
     const currentIds = currentParam ? currentParam.split(',').filter(Boolean) : [];
     const idSet = new Set(currentIds);
-    
+
     // 2. Toggle logic
     if (idSet.has(sid)) {
-        idSet.delete(sid);
+      idSet.delete(sid);
     } else {
-        idSet.add(sid);
+      idSet.add(sid);
     }
-    
+
     // 3. Update URL
     const nextIds = Array.from(idSet);
     if (nextIds.length === 0) {
-        setSearchParams({}, { replace: true });
+      setSearchParams({}, { replace: true });
     } else {
-        setSearchParams({ artists: nextIds.join(',') }, { replace: true });
+      setSearchParams({ artists: nextIds.join(',') }, { replace: true });
     }
   }, [searchParams, setSearchParams]);
 
@@ -114,8 +118,11 @@ const SongsPage = () => {
 
   // ... Form Handlers ...
   const handleInputChange = (event) => {
-    const { name, value } = event.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = event.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
   const toggleArtistSelection = (artistId) => {
@@ -147,12 +154,16 @@ const SongsPage = () => {
       apple: song.streaming?.apple || '',
       tidal: song.streaming?.tidal || '',
       qobuz: song.streaming?.qobuz || '',
+      embed: song.embed || '',
+      embedApple: song.embeds?.apple || '',
+      embedSoundcloud: song.embeds?.soundcloud || '',
+      showOnHome: song.showOnHome || false,
     });
     setIsFormOpen(true);
   };
 
   const handleDelete = async (id) => {
-    if(window.confirm("Are you sure you want to delete this song?")) {
+    if (window.confirm("Are you sure you want to delete this song?")) {
       await deleteSong(id);
     }
   };
@@ -181,6 +192,13 @@ const SongsPage = () => {
         type: formData.type,
         genres: formData.genres.split(',').map((genre) => genre.trim()).filter(Boolean),
         streaming,
+        streaming,
+        embed: formData.embed.trim(),
+        embeds: {
+          apple: formData.embedApple.trim(),
+          soundcloud: formData.embedSoundcloud.trim(),
+        },
+        showOnHome: formData.showOnHome,
       };
 
       if (editingId) {
@@ -203,13 +221,13 @@ const SongsPage = () => {
           <SectionHeading align="left" eyebrow="Catalogue">Songs & Albums</SectionHeading>
           <AppButton variant="ghost" onClick={() => navigate('/artists')}>Explore collaborators →</AppButton>
         </div>
-        
+
         <div className="flex items-start justify-between gap-4">
           <p className="text-zinc-400 max-w-2xl">
             Licenses for production, mixing and mastering projects.
           </p>
           {isAdmin && (
-            <button 
+            <button
               onClick={openAddModal}
               className="flex items-center gap-2 px-4 py-2 bg-lime-500/20 text-lime-400 hover:bg-lime-500/30 rounded-full text-sm font-semibold transition-colors border border-lime-500/30"
             >
@@ -222,18 +240,18 @@ const SongsPage = () => {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 text-zinc-500 text-sm mr-2">
-                <Filter size={14} />
-                <span>Filter by Artist:</span>
+              <Filter size={14} />
+              <span>Filter by Artist:</span>
             </div>
-            
+
             {/* Clear Filter Button */}
             {songFilter?.artistIds?.length > 0 && (
-                 <button
-                 onClick={handleClearFilters}
-                 className="flex items-center gap-1 px-3 py-2 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 text-sm hover:bg-red-500/20 transition-colors"
-               >
-                 <X size={14} /> Clear
-               </button>
+              <button
+                onClick={handleClearFilters}
+                className="flex items-center gap-1 px-3 py-2 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 text-sm hover:bg-red-500/20 transition-colors"
+              >
+                <X size={14} /> Clear
+              </button>
             )}
 
             {artists.map((artist) => {
@@ -244,11 +262,10 @@ const SongsPage = () => {
                   key={artist.id}
                   type="button"
                   onClick={() => toggleFilterArtist(artist.id)}
-                  className={`px-4 py-2 rounded-full border transition-colors text-sm ${
-                    active 
-                    ? 'border-lime-400 bg-lime-500/20 text-white' 
+                  className={`px-4 py-2 rounded-full border transition-colors text-sm ${active
+                    ? 'border-lime-400 bg-lime-500/20 text-white'
                     : 'border-white/10 bg-black/40 text-zinc-300 hover:border-lime-300/60 hover:text-white'
-                  }`}
+                    }`}
                 >
                   {artist.name}
                 </button>
@@ -259,41 +276,55 @@ const SongsPage = () => {
 
         {/* --- MAIN CONTENT (With Context Loader) --- */}
         {contextLoading ? (
-           <div className="flex flex-col items-center justify-center py-32 text-zinc-500">
-             <Loader2 className="w-10 h-10 animate-spin mb-4 text-lime-400" />
-             <p className="animate-pulse">Loading library...</p>
-           </div>
+          <div className="flex flex-col items-center justify-center py-32 text-zinc-500">
+            <Loader2 className="w-10 h-10 animate-spin mb-4 text-lime-400" />
+            <p className="animate-pulse">Loading library...</p>
+          </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {filteredSongs.length > 0 ? (
-                filteredSongs.map((song) => (
-                    <SongCard
-                        key={song.id}
-                        song={song}
-                        onOpenStreams={setStreamSong}
-                        isAdmin={isAdmin}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                    />
-                ))
+              filteredSongs.map((song) => (
+                <SongCard
+                  key={song.id}
+                  song={song}
+                  onOpenStreams={setStreamSong}
+                  isAdmin={isAdmin}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  showEmbedPlayer
+                />
+              ))
             ) : (
-                <div className="col-span-full py-20 text-center text-zinc-500 border border-dashed border-zinc-800 rounded-2xl">
-                    <p>No songs found for this artist.</p>
-                    <button onClick={handleClearFilters} className="mt-4 text-lime-400 hover:underline">Clear filters to see all songs</button>
-                </div>
+              <div className="col-span-full py-20 text-center text-zinc-500 border border-dashed border-zinc-800 rounded-2xl">
+                <p>No songs found for this artist.</p>
+                <button onClick={handleClearFilters} className="mt-4 text-lime-400 hover:underline">Clear filters to see all songs</button>
+              </div>
             )}
           </div>
         )}
       </section>
 
       {/* Modal and Streaming Dialog */}
-      <Modal 
-        open={isFormOpen} 
-        onClose={() => setIsFormOpen(false)} 
+      <Modal
+        open={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
         title={editingId ? 'Edit Song' : 'Add New Song'}
       >
         <form className="space-y-4" onSubmit={handleSubmit}>
-           <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-2 flex items-center gap-3 p-4 rounded-2xl border border-white/10 bg-black/40">
+              <input
+                type="checkbox"
+                name="showOnHome"
+                id="showOnHome"
+                checked={formData.showOnHome}
+                onChange={handleInputChange}
+                className="w-5 h-5 rounded border-zinc-600 text-lime-500 focus:ring-lime-500 bg-black/50"
+              />
+              <label htmlFor="showOnHome" className="text-sm text-zinc-300 select-none cursor-pointer">
+                Show on Home Page (Selected Works)
+              </label>
+            </div>
             <div className="space-y-2">
               <label className="text-sm text-zinc-400">Title</label>
               <input type="text" name="title" value={formData.title} onChange={handleInputChange} className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-lime-400 focus:outline-none" required />
@@ -334,12 +365,62 @@ const SongsPage = () => {
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-2 flex items-center gap-3 p-4 rounded-2xl border border-white/10 bg-black/40">
+              <input
+                type="checkbox"
+                name="showOnHome"
+                id="showOnHome"
+                checked={formData.showOnHome}
+                onChange={handleInputChange}
+                className="w-5 h-5 rounded border-zinc-600 text-lime-500 focus:ring-lime-500 bg-black/50"
+              />
+              <label htmlFor="showOnHome" className="text-sm text-zinc-300 select-none cursor-pointer">
+                Show on Home Page (Selected Works)
+              </label>
+            </div>
             {['spotify', 'apple', 'tidal', 'qobuz'].map((provider) => (
               <div key={provider} className="space-y-2">
                 <label className="text-sm text-zinc-400 capitalize">{provider} link</label>
                 <input type="url" name={provider} value={formData[provider]} onChange={handleInputChange} className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-lime-400 focus:outline-none" placeholder={`https://...`} />
               </div>
             ))}
+          </div>
+          <div className="space-y-4 pt-4 border-t border-white/10">
+            <p className="text-sm font-semibold text-zinc-300">Embed Players</p>
+
+            <div className="space-y-2">
+              <label className="text-xs text-zinc-400">Apple Music Embed Code</label>
+              <textarea
+                name="embedApple"
+                value={formData.embedApple}
+                onChange={handleInputChange}
+                className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-lime-400 focus:outline-none min-h-[100px] font-mono text-xs"
+                placeholder="<iframe ... src='embed.music.apple.com' ...></iframe>"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs text-zinc-400">SoundCloud Embed Code</label>
+              <textarea
+                name="embedSoundcloud"
+                value={formData.embedSoundcloud}
+                onChange={handleInputChange}
+                className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-lime-400 focus:outline-none min-h-[100px] font-mono text-xs"
+                placeholder="<iframe ... src='w.soundcloud.com/player' ...></iframe>"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs text-zinc-400">Custom Embed</label>
+              <textarea
+                name="embed"
+                value={formData.embed}
+                onChange={handleInputChange}
+                className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-lime-400 focus:outline-none min-h-[80px] font-mono text-xs"
+                placeholder="Any other iframe code"
+              />
+            </div>
+            <p className="text-xs text-zinc-500">Paste the full iframe code. Multiple players will be stacked vertically on the song card.</p>
           </div>
           <div className="flex gap-3 justify-end pt-4">
             <AppButton variant="ghost" type="button" onClick={() => setIsFormOpen(false)}>Cancel</AppButton>

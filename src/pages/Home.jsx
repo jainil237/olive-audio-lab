@@ -14,8 +14,9 @@ const Home = () => {
   const navigate = useNavigate();
   const [streamSong, setStreamSong] = useState(null);
 
-  const spotlightSongs = songs.slice(0, 3);
-  const spotlightArtists = artists.slice(0, 4);
+  const spotlightSongs = songs.filter(s => s.showOnHome);
+  const spotlightArtists = artists.filter(a => a.showOnHome);
+  const spotlightAchievements = achievements.filter(a => a.showOnHome);
 
   return (
     <div className="space-y-24 text-white">
@@ -53,9 +54,16 @@ const Home = () => {
           </AppButton>
         </div>
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {spotlightSongs.map((song) => (
-            <SongCard key={song.id} song={song} onOpenStreams={setStreamSong} />
-          ))}
+          {spotlightSongs.length > 0 ? (
+            spotlightSongs.map((song) => (
+              <SongCard key={song.id} song={song} onOpenStreams={setStreamSong} showEmbedPlayer={true} />
+            ))
+          ) : (
+            <div className="col-span-full py-12 text-center text-zinc-500 border border-dashed border-zinc-800 rounded-2xl">
+              <p>No selected works to display.</p>
+              <p className="text-xs mt-2">Go to <span className="text-lime-400 cursor-pointer" onClick={() => navigate('/songs')}>Songs</span> and check "Show on Home Page" to feature tracks here.</p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -84,7 +92,7 @@ const Home = () => {
             View full history →
           </AppButton>
         </div>
-        <AchievementTimeline achievements={achievements.slice(0, 4)} />
+        <AchievementTimeline achievements={spotlightAchievements} />
       </section>
 
       <GlassCard className="bg-zinc-900/70">
