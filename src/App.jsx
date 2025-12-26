@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { CartProvider } from './context/CartContext.jsx';
 import { CatalogProvider } from './context/CatalogContext.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
@@ -19,7 +19,7 @@ const LoginPage = lazy(() => import('./pages/Login.jsx'));
 const SignupPage = lazy(() => import('./pages/Signup.jsx'));
 
 const App = () => (
-  <HashRouter>
+  <BrowserRouter>
     <AuthProvider>
       <CatalogProvider>
         <CartProvider>
@@ -49,7 +49,7 @@ const App = () => (
         </CartProvider>
       </CatalogProvider>
     </AuthProvider>
-  </HashRouter>
+  </BrowserRouter>
 );
 
 export default App;
