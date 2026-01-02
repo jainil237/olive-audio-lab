@@ -27,6 +27,11 @@ const SongEmbedPlayer = ({
     iframe.style.width = '100%';
     iframe.classList.add('rounded-2xl');
 
+    // Accessibility: Set iframe title if missing
+    if (!iframe.getAttribute('title')) {
+      iframe.setAttribute('title', 'Audio Player'); // Default accessible name
+    }
+
     if (!iframe.getAttribute('loading')) {
       iframe.setAttribute('loading', 'lazy');
     }

@@ -192,7 +192,6 @@ const SongsPage = () => {
         type: formData.type,
         genres: formData.genres.split(',').map((genre) => genre.trim()).filter(Boolean),
         streaming,
-        streaming,
         embed: formData.embed.trim(),
         embeds: {
           apple: formData.embedApple.trim(),
