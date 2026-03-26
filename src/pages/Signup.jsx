@@ -3,11 +3,13 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AppButton, GlassCard, SectionHeading } from '../components/ui/primitives.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import useRecaptcha from '../hooks/useRecaptcha.js';
 
 const SignupPage = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
-  
+  const { executeRecaptcha } = useRecaptcha();
+
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,7 +32,7 @@ const SignupPage = () => {
       setError("Passwords do not match.");
       return;
     }
-    
+
     if (form.password.length < 6) {
       setError("Password must be at least 6 characters.");
       return;
@@ -39,7 +41,16 @@ const SignupPage = () => {
     setIsLoading(true);
 
     try {
-        const cleanEmail = form.email.trim();
+      // Execute reCAPTCHA v3 and get token
+      const recaptchaToken = await executeRecaptcha('signup');
+      if (!recaptchaToken) {
+        console.warn('reCAPTCHA token not available, proceeding without verification.');
+      } else {
+        // Token can be sent to backend for verification
+        console.log('reCAPTCHA token generated for signup action');
+      }
+
+      const cleanEmail = form.email.trim();
       await register(cleanEmail, form.password, form.name);
       navigate('/overview', { replace: true });
     } catch (err) {
@@ -72,58 +83,66 @@ const SignupPage = () => {
           <SectionHeading align="left" eyebrow="Join Us">
             Create Account
           </SectionHeading>
-          
+
           <form className="space-y-4" onSubmit={handleSubmit}>
             {/* Name Field */}
             <div className="space-y-2">
-              <label className="text-xs uppercase tracking-[0.3em] text-zinc-500">Full Name</label>
+              <label htmlFor="signup-name" className="text-xs uppercase tracking-[0.3em] text-zinc-500">Full Name</label>
               <input
+                id="signup-name"
                 name="name"
                 type="text"
                 value={form.name}
                 onChange={handleChange}
                 placeholder="Jane Doe"
                 required
+                autoComplete="name"
                 className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-lime-400 focus:outline-none transition-colors"
               />
             </div>
 
             {/* Email Field */}
             <div className="space-y-2">
-              <label className="text-xs uppercase tracking-[0.3em] text-zinc-500">Email</label>
+              <label htmlFor="signup-email" className="text-xs uppercase tracking-[0.3em] text-zinc-500">Email</label>
               <input
+                id="signup-email"
                 name="email"
                 type="email"
                 value={form.email}
                 onChange={handleChange}
                 placeholder="you@studio.com"
                 required
+                autoComplete="email"
                 className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-lime-400 focus:outline-none transition-colors"
               />
             </div>
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label className="text-xs uppercase tracking-[0.3em] text-zinc-500">Password</label>
+              <label htmlFor="signup-password" className="text-xs uppercase tracking-[0.3em] text-zinc-500">Password</label>
               <input
+                id="signup-password"
                 name="password"
                 type="password"
                 value={form.password}
                 onChange={handleChange}
                 required
+                autoComplete="new-password"
                 className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-lime-400 focus:outline-none transition-colors"
               />
             </div>
 
             {/* Confirm Password Field */}
             <div className="space-y-2">
-              <label className="text-xs uppercase tracking-[0.3em] text-zinc-500">Confirm Password</label>
+              <label htmlFor="signup-confirm-password" className="text-xs uppercase tracking-[0.3em] text-zinc-500">Confirm Password</label>
               <input
+                id="signup-confirm-password"
                 name="confirmPassword"
                 type="password"
                 value={form.confirmPassword}
                 onChange={handleChange}
                 required
+                autoComplete="new-password"
                 className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-lime-400 focus:outline-none transition-colors"
               />
             </div>
@@ -138,12 +157,12 @@ const SignupPage = () => {
               {isLoading ? 'Creating Account...' : 'Sign Up'}
             </AppButton>
           </form>
-          
+
           <p className="text-xs text-zinc-500 text-center">
-             Already have an account?{' '}
-             <Link to="/login" className="text-lime-400 hover:underline">
-               Sign in
-             </Link>
+            Already have an account?{' '}
+            <Link to="/login" className="text-lime-400 hover:underline">
+              Sign in
+            </Link>
           </p>
         </div>
       </GlassCard>

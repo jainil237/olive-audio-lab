@@ -11,29 +11,35 @@ import SongStreamingDialog from '../components/SongStreamingDialog.jsx';
 import Modal from '../components/ui/Modal.jsx';
 
 const Home = () => {
-  const { songs, artists, achievements } = useCatalog();
+  const { songs, artists, achievements, landingSelection } = useCatalog();
   // const { addItem } = useCart();
   const navigate = useNavigate();
   const [streamSong, setStreamSong] = useState(null);
   const [showLocation, setShowLocation] = useState(false);
 
-  const spotlightSongs = songs.filter(s => s.showOnHome);
-  const spotlightArtists = artists.filter(a => a.showOnHome);
-  const spotlightAchievements = achievements.filter(a => a.showOnHome);
+  const spotlightSongs = landingSelection.songIds.length > 0
+    ? songs.filter(s => landingSelection.songIds.includes(String(s.id)))
+    : songs.filter(s => s.showOnHome);
+  const spotlightArtists = landingSelection.artistIds.length > 0
+    ? artists.filter(a => landingSelection.artistIds.includes(String(a.id)))
+    : artists.filter(a => a.showOnHome);
+  const spotlightAchievements = landingSelection.achievementIds.length > 0
+    ? achievements.filter(a => landingSelection.achievementIds.includes(String(a.id)))
+    : achievements.filter(a => a.showOnHome);
 
   return (
     <div className="space-y-24 text-white">
-      <section className="relative overflow-hidden rounded-[3rem] border border-white/10 bg-gradient-to-br from-black via-zinc-900 to-zinc-950 p-10 md:p-20 text-center">
+      <section className="relative overflow-hidden rounded-2xl sm:rounded-[3rem] border border-white/10 bg-gradient-to-br from-black via-zinc-900 to-zinc-950 p-6 sm:p-10 md:p-20 text-center">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-[-30%] right-[-20%] w-[520px] h-[520px] bg-emerald-500/15 blur-[140px]" />
           <div className="absolute bottom-[-20%] left-[-10%] w-[420px] h-[420px] bg-lime-500/15 blur-[120px]" />
         </div>
         <div className="relative z-10 space-y-6 max-w-3xl mx-auto">
           <span className="inline-block text-xs tracking-[0.3em] uppercase text-lime-300/90">Sonic Perfection</span>
-          <h1 className="text-5xl md:text-[4.5rem] font-bold tracking-tight leading-[1.05]">
+          <h1 className="text-3xl sm:text-5xl md:text-[4.5rem] font-bold tracking-tight leading-[1.05]">
             Olive Audio Lab
           </h1>
-          <p className="text-lg md:text-xl text-zinc-300">
+          <p className="text-base sm:text-lg md:text-xl text-zinc-300">
             Crafted productions, mixes and masters for the next generation of artists.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -51,7 +57,7 @@ const Home = () => {
       </section>
 
       <section className="space-y-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <SectionHeading align="left" eyebrow="Catalogue">
             Selected Works
           </SectionHeading>
@@ -74,7 +80,7 @@ const Home = () => {
       </section>
 
       <section className="space-y-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <SectionHeading align="left" eyebrow="Collaborators">
             Featured Artists
           </SectionHeading>
@@ -82,7 +88,7 @@ const Home = () => {
             Meet all collaborators →
           </AppButton>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
           {spotlightArtists.map((artist) => (
             <ArtistCard key={artist.id} artist={artist} />
           ))}
@@ -90,7 +96,7 @@ const Home = () => {
       </section>
 
       <section className="space-y-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <SectionHeading align="left" eyebrow="Recognition">
             Achievements & Awards
           </SectionHeading>

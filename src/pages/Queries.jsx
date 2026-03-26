@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Pencil, Trash2, X, ArrowRight, ShieldAlert } from 'lucide-react';
 import { Link } from 'react-router-dom'; // Import Link
 import { AppButton, GlassCard, SectionHeading } from '../components/ui/primitives.jsx';
-import { useCatalog } from '../context/CatalogContext.jsx'; 
+import { useCatalog } from '../context/CatalogContext.jsx';
+import useRecaptcha from '../hooks/useRecaptcha.js';
 
 const initialFormState = {
   name: '',
@@ -15,7 +16,8 @@ const initialFormState = {
 const QueriesPage = () => {
   // Pull isAdmin from context
   const { addQuery, updateQuery, deleteQuery, queries, currentUser, isAdmin } = useCatalog();
-  
+  const { executeRecaptcha } = useRecaptcha();
+
   const [formData, setFormData] = useState(initialFormState);
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -56,6 +58,15 @@ const QueriesPage = () => {
     setSuccess(false);
 
     try {
+      // Execute reCAPTCHA v3 and get token
+      const recaptchaToken = await executeRecaptcha('contact');
+      if (!recaptchaToken) {
+        console.warn('reCAPTCHA token not available, proceeding without verification.');
+      } else {
+        // Token can be sent to backend for verification
+        console.log('reCAPTCHA token generated for contact action');
+      }
+
       if (editingId) {
         await updateQuery(editingId, { ...formData, updatedAt: new Date() });
       } else {
@@ -98,7 +109,7 @@ const QueriesPage = () => {
         <form onSubmit={handleSubmit} className={`relative space-y-4 overflow-hidden rounded-[2.5rem] border ${editingId ? 'border-lime-500/30' : 'border-white/5'} bg-black/60 p-6 md:p-8 transition-colors duration-300`}>
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-emerald-500/10 opacity-70" />
           <div className="pointer-events-none absolute -top-20 -right-16 h-48 w-48 rounded-full bg-lime-400/20 blur-3xl" />
-          
+
           <div className="relative space-y-4">
             {editingId && (
               <div className="flex items-center justify-between bg-lime-500/10 px-4 py-2 rounded-xl border border-lime-500/20 text-lime-300 text-sm mb-4">
@@ -145,10 +156,10 @@ const QueriesPage = () => {
                 {submitting ? 'Saving...' : (editingId ? 'Update Query' : 'Submit Query')}
               </AppButton>
               {editingId && (
-                 <AppButton type="button" variant="ghost" onClick={handleCancelEdit} disabled={submitting}>Cancel</AppButton>
+                <AppButton type="button" variant="ghost" onClick={handleCancelEdit} disabled={submitting}>Cancel</AppButton>
               )}
             </div>
-            
+
             {success && (
               <div className="rounded-2xl border border-lime-500/40 bg-lime-500/10 px-4 py-2 text-sm text-lime-200 animate-in fade-in slide-in-from-top-2">
                 {editingId ? 'Query updated successfully.' : "Thanks! We've received your brief."}
@@ -173,7 +184,7 @@ const QueriesPage = () => {
         </GlassCard>
 
         {/* --- CONDITIONAL RENDERING START --- */}
-        
+
         {/* CASE 1: ADMIN VIEW */}
         {isAdmin && (
           <div className="space-y-4 pt-6 border-t border-white/10">
@@ -200,7 +211,7 @@ const QueriesPage = () => {
         {!isAdmin && currentUser && (
           <div className="space-y-4 pt-6 border-t border-white/10">
             <h4 className="text-lg font-semibold flex items-center gap-2 text-zinc-200">Previous Queries</h4>
-            
+
             {queries.length === 0 ? (
               <p className="text-sm text-zinc-500 italic">No previous queries found.</p>
             ) : (
@@ -217,13 +228,13 @@ const QueriesPage = () => {
                       </div>
                     </div>
                     <div className="space-y-1">
-                       <h5 className="text-sm font-semibold text-white truncate">{entry.projectType || 'General Inquiry'}</h5>
-                       <p className="text-sm text-zinc-400 line-clamp-2 leading-relaxed" title={entry.message}>{entry.message || 'No description provided.'}</p>
+                      <h5 className="text-sm font-semibold text-white truncate">{entry.projectType || 'General Inquiry'}</h5>
+                      <p className="text-sm text-zinc-400 line-clamp-2 leading-relaxed" title={entry.message}>{entry.message || 'No description provided.'}</p>
                     </div>
                     <div className="pt-2 flex justify-between items-center">
-                        <div className="text-xs text-zinc-500 truncate max-w-[70%]">
-                           <span className="text-zinc-600">Budget: </span><span className="text-zinc-300 truncate">{entry.budget || 'TBD'}</span>
-                        </div>
+                      <div className="text-xs text-zinc-500 truncate max-w-[70%]">
+                        <span className="text-zinc-600">Budget: </span><span className="text-zinc-300 truncate">{entry.budget || 'TBD'}</span>
+                      </div>
                     </div>
                   </GlassCard>
                 ))}
@@ -234,9 +245,9 @@ const QueriesPage = () => {
 
         {/* CASE 3: GUEST VIEW */}
         {!isAdmin && !currentUser && (
-            <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-center mt-6">
-                <p className="text-sm text-zinc-400">Sign in to track and manage your project queries.</p>
-            </div>
+          <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-center mt-6">
+            <p className="text-sm text-zinc-400">Sign in to track and manage your project queries.</p>
+          </div>
         )}
 
       </div>

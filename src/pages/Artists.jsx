@@ -116,12 +116,12 @@ const ArtistsPage = () => {
   return (
     <div className="space-y-16 text-white">
       <section className="space-y-6">
-        <div className="flex items-center justify-between gap-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
           <SectionHeading align="left" eyebrow="Collaborators">Artists & Partners</SectionHeading>
           <AppButton variant="ghost" onClick={() => window.location.assign('/songs')}>Explore catalogue →</AppButton>
         </div>
 
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
           <p className="text-zinc-400 max-w-2xl">
             A curated network of vocalists, instrumentalists and producers we regularly work with at Olive Audio Lab.
           </p>
@@ -135,7 +135,7 @@ const ArtistsPage = () => {
           )}
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
           {artists.map((artist) => (
             <ArtistCard
               key={artist.id}

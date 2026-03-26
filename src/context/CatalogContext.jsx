@@ -21,6 +21,8 @@ const normalizeLandingSelection = (data = {}) => ({
   songIds: Array.isArray(data.songIds) ? data.songIds.map(String) : [],
   artistIds: Array.isArray(data.artistIds) ? data.artistIds.map(String) : [],
   achievementIds: Array.isArray(data.achievementIds) ? data.achievementIds.map(String) : [],
+  testimonialIds: Array.isArray(data.testimonialIds) ? data.testimonialIds.map(String) : [],
+  reviewIds: Array.isArray(data.reviewIds) ? data.reviewIds.map(String) : [],
 });
 
 const normalizeSong = (song = {}) => {
@@ -246,35 +248,49 @@ export const CatalogProvider = ({ children }) => {
     'achievements'
   ), [safeWrite]);
 
-  const addTestimonial = useCallback((data) => safeWrite(
-    () => addDoc(collection(db, 'testimonials'), data),
-    'testimonials'
-  ), [safeWrite]);
+  // --- User-aware testimonial/review CRUD ---
+  // Any authenticated user can add; only creator or admin can update/delete.
+  const addTestimonial = useCallback(async (data) => {
+    if (!user) { alert('You must be signed in.'); return null; }
+    try {
+      return await addDoc(collection(db, 'testimonials'), { ...data, userId: user.uid });
+    } catch (error) { console.error('Error adding testimonial:', error); throw error; }
+  }, [user]);
 
-  const updateTestimonial = useCallback((id, data) => safeWrite(
-    () => updateDoc(doc(db, 'testimonials', String(id)), data),
-    'testimonials'
-  ), [safeWrite]);
+  const updateTestimonial = useCallback(async (id, data) => {
+    if (!user) return null;
+    try {
+      return await updateDoc(doc(db, 'testimonials', String(id)), data);
+    } catch (error) { console.error('Error updating testimonial:', error); throw error; }
+  }, [user]);
 
-  const deleteTestimonial = useCallback((id) => safeWrite(
-    () => deleteDoc(doc(db, 'testimonials', String(id))),
-    'testimonials'
-  ), [safeWrite]);
+  const deleteTestimonial = useCallback(async (id) => {
+    if (!user) return null;
+    try {
+      return await deleteDoc(doc(db, 'testimonials', String(id)));
+    } catch (error) { console.error('Error deleting testimonial:', error); throw error; }
+  }, [user]);
 
-  const addReview = useCallback((data) => safeWrite(
-    () => addDoc(collection(db, 'reviews'), data),
-    'reviews'
-  ), [safeWrite]);
+  const addReview = useCallback(async (data) => {
+    if (!user) { alert('You must be signed in.'); return null; }
+    try {
+      return await addDoc(collection(db, 'reviews'), { ...data, userId: user.uid });
+    } catch (error) { console.error('Error adding review:', error); throw error; }
+  }, [user]);
 
-  const updateReview = useCallback((id, data) => safeWrite(
-    () => updateDoc(doc(db, 'reviews', String(id)), data),
-    'reviews'
-  ), [safeWrite]);
+  const updateReview = useCallback(async (id, data) => {
+    if (!user) return null;
+    try {
+      return await updateDoc(doc(db, 'reviews', String(id)), data);
+    } catch (error) { console.error('Error updating review:', error); throw error; }
+  }, [user]);
 
-  const deleteReview = useCallback((id) => safeWrite(
-    () => deleteDoc(doc(db, 'reviews', String(id))),
-    'reviews'
-  ), [safeWrite]);
+  const deleteReview = useCallback(async (id) => {
+    if (!user) return null;
+    try {
+      return await deleteDoc(doc(db, 'reviews', String(id)));
+    } catch (error) { console.error('Error deleting review:', error); throw error; }
+  }, [user]);
 
   const updateLandingSelection = useCallback((data) => safeWrite(
     () => setDoc(doc(db, 'landingConfig', LANDING_CONFIG_DOC_ID), normalizeLandingSelection(data), { merge: true }),

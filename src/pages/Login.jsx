@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { AppButton, GlassCard, SectionHeading } from '../components/ui/primitives.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import useRecaptcha from '../hooks/useRecaptcha.js';
 
 const LoginPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { login } = useAuth();
-  
+  const { executeRecaptcha } = useRecaptcha();
+
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -25,8 +27,17 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
+      // Execute reCAPTCHA v3 and get token
+      const recaptchaToken = await executeRecaptcha('login');
+      if (!recaptchaToken) {
+        console.warn('reCAPTCHA token not available, proceeding without verification.');
+      } else {
+        // Token can be sent to backend for verification
+        console.log('reCAPTCHA token generated for login action');
+      }
+
       const cleanEmail = form.email.trim();
-      
+
       await login(cleanEmail, form.password);
       navigate(redirect || '/overview', { replace: true });
     } catch (authError) {
@@ -56,31 +67,35 @@ const LoginPage = () => {
           <SectionHeading align="left" eyebrow="Access">
             Sign In
           </SectionHeading>
-          
+
           <form className="space-y-4" onSubmit={handleSubmit}>
             {/* Email Field */}
             <div className="space-y-2">
-              <label className="text-xs uppercase tracking-[0.3em] text-zinc-500">Email</label>
+              <label htmlFor="login-email" className="text-xs uppercase tracking-[0.3em] text-zinc-500">Email</label>
               <input
+                id="login-email"
                 name="email"
                 type="email"
                 value={form.email}
                 onChange={handleChange}
                 placeholder="you@studio.com"
                 required
+                autoComplete="email"
                 className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-lime-400 focus:outline-none transition-colors"
               />
             </div>
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label className="text-xs uppercase tracking-[0.3em] text-zinc-500">Password</label>
+              <label htmlFor="login-password" className="text-xs uppercase tracking-[0.3em] text-zinc-500">Password</label>
               <input
+                id="login-password"
                 name="password"
                 type="password"
                 value={form.password}
                 onChange={handleChange}
                 required
+                autoComplete="current-password"
                 className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm focus:border-lime-400 focus:outline-none transition-colors"
               />
             </div>
@@ -95,12 +110,12 @@ const LoginPage = () => {
               {isLoading ? 'Signing in...' : 'Enter Studio'}
             </AppButton>
           </form>
-          
+
           <p className="text-xs text-zinc-500 text-center">
-             Don't have an account?{' '}
-             <Link to="/signup" className="text-lime-400 hover:underline">
-               Create one
-             </Link>
+            Don't have an account?{' '}
+            <Link to="/signup" className="text-lime-400 hover:underline">
+              Create one
+            </Link>
           </p>
         </div>
       </GlassCard>

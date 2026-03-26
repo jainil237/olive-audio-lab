@@ -216,12 +216,12 @@ const SongsPage = () => {
   return (
     <div className="space-y-16 text-white min-h-screen">
       <section className="space-y-6">
-        <div className="flex items-center justify-between gap-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
           <SectionHeading align="left" eyebrow="Catalogue">Songs & Albums</SectionHeading>
           <AppButton variant="ghost" onClick={() => navigate('/artists')}>Explore collaborators →</AppButton>
         </div>
 
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
           <p className="text-zinc-400 max-w-2xl">
             Licenses for production, mixing and mastering projects.
           </p>
@@ -280,7 +280,7 @@ const SongsPage = () => {
             <p className="animate-pulse">Loading library...</p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
             {filteredSongs.length > 0 ? (
               filteredSongs.map((song) => (
                 <SongCard

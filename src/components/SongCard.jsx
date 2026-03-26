@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import clsx from 'clsx';
 import { Info, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import SongEmbedPlayer from './SongEmbedPlayer.jsx';
@@ -35,11 +35,25 @@ const FrequencyBars = () => (
   </div>
 );
 
-const EmbedPlaceholder = ({ text = "Awaiting Embed" }) => (
-  <div className="relative flex h-full min-h-[220px] flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-zinc-900 via-black to-zinc-950">
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(163,230,53,0.18),_transparent_65%)]" />
-    <FrequencyBars />
-    <p className="mt-6 text-xs uppercase tracking-[0.35em] text-lime-300/70">{text}</p>
+const EMBED_PLAYER_HEIGHT = 252; // Fixed height for uniform cards
+
+const EmbedPlaceholder = ({ text = "Awaiting Embed", isError = false }) => (
+  <div className={`relative flex flex-col items-center justify-center overflow-hidden ${isError ? 'bg-gradient-to-br from-red-950/30 via-zinc-950 to-zinc-950' : 'bg-gradient-to-br from-zinc-900 via-black to-zinc-950'}`} style={{ height: `${EMBED_PLAYER_HEIGHT}px` }}>
+    <div className={`absolute inset-0 ${isError ? 'bg-[radial-gradient(circle_at_top,_rgba(239,68,68,0.12),_transparent_65%)]' : 'bg-[radial-gradient(circle_at_top,_rgba(163,230,53,0.18),_transparent_65%)]'}`} />
+    {isError ? (
+      <>
+        <svg className="w-10 h-10 text-red-400/60 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+        </svg>
+        <p className="text-xs uppercase tracking-[0.35em] text-red-300/70">{text}</p>
+        <p className="text-[10px] text-zinc-600 mt-1">Track may have been removed</p>
+      </>
+    ) : (
+      <>
+        <FrequencyBars />
+        <p className="mt-6 text-xs uppercase tracking-[0.35em] text-lime-300/70">{text}</p>
+      </>
+    )}
   </div>
 );
 
@@ -93,6 +107,17 @@ const SongCard = ({
   const hasEmbeds = embedEntries.length > 0;
   const shouldShowEmbeds = showEmbedPlayer && hasEmbeds;
 
+  // Track error state per embed tab
+  const [embedErrors, setEmbedErrors] = useState({});
+  const handleEmbedError = useCallback((key) => {
+    setEmbedErrors(prev => ({ ...prev, [key]: true }));
+  }, []);
+
+  // Check if ALL embeds have errored
+  const allEmbedsErrored = hasEmbeds && embedEntries.every(e => embedErrors[e.key]);
+  // Check if active tab has errored
+  const activeTabErrored = activeTab && embedErrors[activeTab];
+
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -109,7 +134,7 @@ const SongCard = ({
       "hover:border-lime-400/50 hover:shadow-[0_20px_50px_-25px_rgba(163,230,53,0.4)]",
       coverOverlayMap[song.cover] || 'bg-zinc-900'
     )}>
-      <div className="relative overflow-hidden pt-14 bg-black/40">
+      <div className="relative overflow-hidden pt-14 bg-black/40" style={{ minHeight: `${EMBED_PLAYER_HEIGHT + 56}px` }}>
 
         {shouldShowEmbeds ? (
           <div className="flex flex-col">
@@ -137,17 +162,23 @@ const SongCard = ({
 
             {embedEntries.map((embed) => (
               <div key={embed.key} className={clsx(activeTab === embed.key ? "block" : "hidden")}>
-                <SongEmbedPlayer
-                  embedHtml={embed.html}
-                  minHeight={220}
-                  className="rounded-none md:rounded-t-3xl border-t border-white/10"
-                  placeholder={<EmbedPlaceholder text={embed.key === 'legacy' || embed.key === 'primary' ? 'Loading Player' : `Loading ${embed.label}`} />}
-                />
+                {embedErrors[embed.key] ? (
+                  <EmbedPlaceholder text={`Not available from ${embed.label}`} isError={true} />
+                ) : (
+                  <SongEmbedPlayer
+                    embedHtml={embed.html}
+                    providerLabel={embed.label}
+                    fixedHeight={EMBED_PLAYER_HEIGHT}
+                    className="rounded-none md:rounded-t-3xl border-t border-white/10"
+                    onError={() => handleEmbedError(embed.key)}
+                    placeholder={<EmbedPlaceholder text={embed.key === 'legacy' || embed.key === 'primary' ? 'Loading Player' : `Loading ${embed.label}`} />}
+                  />
+                )}
               </div>
             ))}
           </div>
         ) : (
-          <EmbedPlaceholder text="No Embed Available" />
+          <EmbedPlaceholder text="No Embed Available" isError={!hasEmbeds} />
         )}
 
         <div className="absolute top-4 right-4 flex items-center gap-2 z-20">
@@ -155,7 +186,8 @@ const SongCard = ({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onOpenStreams(song); }}
-              className="px-4 py-1.5 text-xs font-semibold tracking-wide rounded-full border border-white/20 bg-black/50 backdrop-blur-sm text-white transition-colors hover:text-lime-200 hover:border-lime-300/70"
+              aria-label={`Listen full track: ${song.title}`}
+              className="px-3 sm:px-4 py-1.5 text-xs font-semibold tracking-wide rounded-full border border-white/20 bg-black/50 backdrop-blur-sm text-white transition-colors hover:text-lime-200 hover:border-lime-300/70"
             >
               Listen Full Track
             </button>
@@ -166,6 +198,7 @@ const SongCard = ({
               <button
                 onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
                 className="p-1.5 rounded-full bg-black/40 border border-white/20 text-white hover:bg-black/70 hover:text-lime-300 transition-colors"
+                aria-label={`Options for ${song.title}`}
               >
                 <MoreVertical size={16} />
               </button>
@@ -175,12 +208,14 @@ const SongCard = ({
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEdit?.(song); }}
                     className="flex items-center gap-2 px-4 py-2 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-white text-left"
+                    aria-label={`Edit ${song.title}`}
                   >
                     <Edit size={12} /> Edit
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete?.(song.id); }}
                     className="flex items-center gap-2 px-4 py-2 text-xs text-red-400 hover:bg-zinc-800 hover:text-red-300 text-left"
+                    aria-label={`Delete ${song.title}`}
                   >
                     <Trash2 size={12} /> Delete
                   </button>
@@ -217,7 +252,7 @@ const SongCard = ({
       </div>
 
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         <div className="flex justify-between items-start gap-4">
           <div>
             <h3 className="text-xl font-bold text-white mb-1">{song.title}</h3>

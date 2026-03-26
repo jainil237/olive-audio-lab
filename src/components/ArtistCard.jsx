@@ -21,7 +21,8 @@ const ArtistCard = ({ artist, onClick, isAdmin, onEdit, onDelete }) => {
       <button
         type="button"
         onClick={() => onClick?.(artist)}
-        className="w-full text-left bg-zinc-900/50 hover:bg-zinc-900 transition-colors border border-zinc-800 rounded-2xl p-6 flex flex-col gap-4 relative z-10"
+        aria-label={`View details for ${artist.name}`}
+        className="w-full text-left bg-zinc-900/50 hover:bg-zinc-900 transition-colors border border-zinc-800 rounded-2xl p-4 sm:p-6 flex flex-col gap-4 relative z-10"
       >
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-lime-400/60 to-emerald-500/60 flex items-center justify-center text-white font-semibold">
@@ -57,6 +58,7 @@ const ArtistCard = ({ artist, onClick, isAdmin, onEdit, onDelete }) => {
           <button
             onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
             className="p-1 rounded-full text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+            aria-label={`Options for ${artist.name}`}
           >
             <MoreVertical size={20} />
           </button>
@@ -66,12 +68,14 @@ const ArtistCard = ({ artist, onClick, isAdmin, onEdit, onDelete }) => {
               <button 
                 onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEdit?.(artist); }}
                 className="flex items-center gap-2 px-4 py-2 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-white text-left"
+                aria-label={`Edit ${artist.name}`}
               >
                 <Edit size={12} /> Edit
               </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete?.(artist.id); }}
                 className="flex items-center gap-2 px-4 py-2 text-xs text-red-400 hover:bg-zinc-800 hover:text-red-300 text-left"
+                aria-label={`Delete ${artist.name}`}
               >
                 <Trash2 size={12} /> Delete
               </button>

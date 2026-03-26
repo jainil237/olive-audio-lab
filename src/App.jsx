@@ -18,6 +18,7 @@ const QueriesListingPage = lazy(() => import('./pages/QueriesListing.jsx'));
 const LoginPage = lazy(() => import('./pages/Login.jsx'));
 const SignupPage = lazy(() => import('./pages/Signup.jsx'));
 const ContentManager = lazy(() => import('./pages/ContentManager.jsx'));
+const ReviewsPage = lazy(() => import('./pages/Reviews.jsx'));
 
 const App = () => (
   <BrowserRouter>
@@ -40,6 +41,7 @@ const App = () => (
                 <Route path="/songs" element={<SongsPage />} />
                 <Route path="/artists" element={<ArtistsPage />} />
                 <Route path="/achievements" element={<AchievementsPage />} />
+                <Route path="/reviews" element={<ReviewsPage />} />
                 <Route path="/queries" element={<QueriesPage />} />
                 <Route
                   path="/content"
